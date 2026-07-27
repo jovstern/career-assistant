@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #151a2c;
+  --color-ink-soft: #232a44;
+  --color-workspace: #f7f7f5;
+  --color-cobalt: #2453ff;
+  --color-cobalt-soft: #e8edff;
+
+  --color-stage-saved: #64748b;
+  --color-stage-applied: #2453ff;
+  --color-stage-interviewing: #7c3aed;
+  --color-stage-offer: #0f9d58;
+  --color-stage-rejected: #b91c1c;
+
+  --font-display: "Space Grotesk", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+body {
+  @apply bg-workspace text-ink antialiased;
+  font-family: system-ui, -apple-system, sans-serif;
+}
