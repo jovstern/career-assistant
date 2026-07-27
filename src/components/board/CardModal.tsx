@@ -1,16 +1,55 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import type { Application, Stage } from '../../types'
 import { STAGES, STAGE_LABELS } from '../../types'
+import { analyzeSkillGap, generateResume } from '../../lib/ai'
+import { SkillGapPanel } from './SkillGapPanel'
 
 interface Props {
   application: Application
   onClose: () => void
-  onUpdate: (data: Partial<Pick<Application, 'stage' | 'notes'>>) => Promise<void>
+  onUpdate: (data: Partial<Pick<Application, 'stage' | 'notes' | 'skillGap'>>) => Promise<void>
   onDelete: () => Promise<void>
 }
 
 export function CardModal({ application, onClose, onUpdate, onDelete }: Props) {
+  const navigate = useNavigate()
   const [notes, setNotes] = useState(application.notes)
+  const [aiBusy, setAiBusy] = useState<'resume' | 'gap' | null>(null)
+  const [aiError, setAiError] = useState('')
+
+  const runResume = async () => {
+    setAiBusy('resume')
+    setAiError('')
+    try {
+      const resumeId = await generateResume(application.id)
+      navigate(`/resume/${resumeId}`)
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : 'Resume generation failed')
+    } finally {
+      setAiBusy(null)
+    }
+  }
+
+  const runGap = async () => {
+    setAiBusy('gap')
+    setAiError('')
+    try {
+      await analyzeSkillGap(application.id)
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : 'Skill gap analysis failed')
+    } finally {
+      setAiBusy(null)
+    }
+  }
+
+  const toggleGapItem = (index: number) => {
+    if (!application.skillGap) return
+    const items = application.skillGap.items.map((item, i) =>
+      i === index ? { ...item, done: !item.done } : item
+    )
+    void onUpdate({ skillGap: { ...application.skillGap, items } })
+  }
 
   const saveNotes = async () => {
     if (notes !== application.notes) await onUpdate({ notes })
@@ -95,6 +134,38 @@ export function CardModal({ application, onClose, onUpdate, onDelete }: Props) {
             placeholder="Recruiter contacts, interview dates, impressions…"
             className="mt-1 w-full rounded-md border border-slate-200 p-2 text-sm focus:border-cobalt focus:outline-none"
           />
+        </div>
+
+        <div className="mt-4">
+          <label className="font-mono text-[11px] uppercase text-slate-400">AI tools</label>
+          <div className="mt-1 flex flex-wrap gap-2">
+            <button
+              onClick={runResume}
+              disabled={aiBusy !== null}
+              className="rounded-md bg-cobalt px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
+            >
+              {aiBusy === 'resume' ? 'Generating…' : application.resumeId ? 'Regenerate resume' : 'Generate resume'}
+            </button>
+            {application.resumeId && (
+              <button
+                onClick={() => navigate(`/resume/${application.resumeId}`)}
+                className="rounded-md border border-cobalt px-3 py-1.5 text-xs font-medium text-cobalt hover:bg-cobalt-soft"
+              >
+                View resume
+              </button>
+            )}
+            <button
+              onClick={runGap}
+              disabled={aiBusy !== null}
+              className="rounded-md border border-cobalt px-3 py-1.5 text-xs font-medium text-cobalt hover:bg-cobalt-soft disabled:opacity-50"
+            >
+              {aiBusy === 'gap' ? 'Analyzing…' : application.skillGap ? 'Re-analyze skill gap' : 'Analyze skill gap'}
+            </button>
+          </div>
+          {aiError && <p className="mt-2 text-xs text-red-500">{aiError}</p>}
+          {application.skillGap && (
+            <SkillGapPanel skillGap={application.skillGap} onToggle={toggleGapItem} />
+          )}
         </div>
 
         <div className="mt-4 flex justify-end">

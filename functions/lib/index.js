@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchJobsNow = exports.dailyJobFetch = void 0;
+exports.fetchJobsNow = exports.dailyJobFetch = exports.analyzeSkillGap = exports.generateResume = void 0;
 const scheduler_1 = require("firebase-functions/v2/scheduler");
 const https_1 = require("firebase-functions/v2/https");
 const logger = __importStar(require("firebase-functions/logger"));
@@ -42,6 +42,9 @@ const firestore_1 = require("firebase-admin/firestore");
 const jobProvider_1 = require("./jobProvider");
 (0, app_1.initializeApp)();
 const db = (0, firestore_1.getFirestore)();
+var ai_1 = require("./ai");
+Object.defineProperty(exports, "generateResume", { enumerable: true, get: function () { return ai_1.generateResume; } });
+Object.defineProperty(exports, "analyzeSkillGap", { enumerable: true, get: function () { return ai_1.analyzeSkillGap; } });
 const provider = new jobProvider_1.MockJobProvider();
 async function fetchMatchesForUser(uid, criteria) {
     const jobs = await provider.search(criteria);

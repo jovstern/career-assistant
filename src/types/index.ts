@@ -22,6 +22,19 @@ export interface UserProfile {
   }
 }
 
+export interface SkillGapItem {
+  skill: string
+  priority: 'high' | 'medium' | 'low'
+  suggestion: string
+  done: boolean
+}
+
+export interface SkillGap {
+  summary: string
+  items: SkillGapItem[]
+  analyzedAt: number
+}
+
 export interface Application {
   id: string
   company: string
@@ -32,6 +45,17 @@ export interface Application {
   stage: Stage
   notes: string
   source: 'manual' | 'agent'
+  resumeId?: string
+  skillGap?: SkillGap
   createdAt: number
   updatedAt: number
+}
+
+export interface Resume {
+  id: string
+  applicationId: string
+  jobTitle: string
+  company: string
+  markdown: string
+  createdAt: number
 }

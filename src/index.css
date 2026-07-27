@@ -21,3 +21,35 @@ body {
   @apply bg-workspace text-ink antialiased;
   font-family: system-ui, -apple-system, sans-serif;
 }
+
+/* Markdown resume typography (kept minimal; also used for print/PDF export) */
+.prose-resume h1 {
+  @apply font-display text-2xl font-bold;
+}
+.prose-resume h2 {
+  @apply mt-6 border-b border-slate-200 pb-1 font-display text-lg font-bold;
+}
+.prose-resume h3 {
+  @apply mt-4 text-base font-semibold;
+}
+.prose-resume p {
+  @apply mt-2 text-sm leading-relaxed text-slate-700;
+}
+.prose-resume ul {
+  @apply mt-2 list-disc space-y-1 pl-5 text-sm text-slate-700;
+}
+.prose-resume strong {
+  @apply font-semibold text-ink;
+}
+
+@media print {
+  aside {
+    display: none !important;
+  }
+  main {
+    overflow: visible !important;
+  }
+  body {
+    background: white;
+  }
+}

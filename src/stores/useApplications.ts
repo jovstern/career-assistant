@@ -17,7 +17,11 @@ interface ApplicationsState {
   loading: boolean
   subscribe: (uid: string) => () => void
   add: (uid: string, data: Omit<Application, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>
-  update: (uid: string, id: string, data: Partial<Pick<Application, 'stage' | 'notes'>>) => Promise<void>
+  update: (
+    uid: string,
+    id: string,
+    data: Partial<Pick<Application, 'stage' | 'notes' | 'skillGap'>>
+  ) => Promise<void>
   remove: (uid: string, id: string) => Promise<void>
 }
 

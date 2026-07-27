@@ -8,6 +8,8 @@ import type { JobSearchCriteria } from './jobProvider'
 
 initializeApp()
 const db = getFirestore()
+
+export { generateResume, analyzeSkillGap } from './ai'
 const provider = new MockJobProvider()
 
 interface FetchResult {
