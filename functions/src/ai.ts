@@ -31,15 +31,24 @@ export const generateResume = onCall(async (request) => {
 
   const { profile, application, settings } = await loadContext(uid, applicationId)
 
+  const baseResume = typeof profile.baseResume === 'string' ? profile.baseResume.trim() : ''
+  const { baseResume: _omit, ...profileRest } = profile
+
   const markdown = await callAI(settings, {
     maxTokens: 8192,
     system:
       'You are an expert resume writer for tech professionals. Produce a complete, tailored resume in clean Markdown. ' +
-      'Use the candidate profile for the header, title, and skills. Tailor the professional summary and skill emphasis to the target job. ' +
-      'The profile has no work history: create an Experience section with 2-3 placeholder roles clearly marked like "[Company — add your role details]", ' +
-      'with bullet points suggesting achievements that would resonate for this specific job so the candidate can adapt them. ' +
+      (baseResume
+        ? 'Rework the candidate\'s existing resume for the target job: keep all real experience, employers, and dates truthful and intact, ' +
+          'but reorder, reword, and re-emphasize achievements and skills to match what this job values. Sharpen the professional summary for this role. ' +
+          'Never invent employers, roles, or accomplishments that are not in the source resume. '
+        : 'The candidate has no stored resume: use the profile for the header, title, and skills, and create an Experience section with 2-3 placeholder roles ' +
+          'clearly marked like "[Company — add your role details]", with bullet points suggesting achievements that would resonate for this specific job. ') +
       'Output ONLY the resume markdown, no preamble.',
-    user: `Candidate profile:\n${JSON.stringify(profile, null, 2)}\n\nTarget job:\nTitle: ${application.jobTitle}\nCompany: ${application.company}\nDescription: ${application.description || '(none provided)'}`,
+    user:
+      `Candidate profile:\n${JSON.stringify(profileRest, null, 2)}\n\n` +
+      (baseResume ? `Candidate's current resume:\n${baseResume.slice(0, 30000)}\n\n` : '') +
+      `Target job:\nTitle: ${application.jobTitle}\nCompany: ${application.company}\nDescription: ${application.description || '(none provided)'}`,
   })
 
   const now = Date.now()

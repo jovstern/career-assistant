@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '../stores/useAuth'
 import { useProfile } from '../stores/useProfile'
+import { parseResumeFile } from '../lib/parseResumeFile'
 import type { UserProfile } from '../types'
 
 const inputCls =
@@ -15,6 +16,26 @@ export function ProfilePage() {
   const { profile, loaded, load, save } = useProfile()
   const [form, setForm] = useState(profile)
   const [saved, setSaved] = useState(false)
+  const [uploadError, setUploadError] = useState('')
+  const [parsing, setParsing] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const onResumeFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setParsing(true)
+    setUploadError('')
+    try {
+      const text = await parseResumeFile(file)
+      if (!text) throw new Error('No text could be extracted from that file')
+      setForm((f) => ({ ...f, baseResume: text }))
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Could not read the file')
+    } finally {
+      setParsing(false)
+      if (fileRef.current) fileRef.current.value = ''
+    }
+  }
 
   useEffect(() => {
     if (user && !loaded) void load(user.uid)
@@ -161,6 +182,44 @@ export function ProfilePage() {
               </div>
             </div>
           </div>
+        </fieldset>
+
+        <fieldset className="rounded-lg border border-slate-200 p-4">
+          <legend className={`${labelCls} px-1`}>Your resume</legend>
+          <p className="text-xs text-slate-500">
+            Upload or paste your current resume. The AI resume builder combines it with jobs from
+            your board to produce tailored versions.
+          </p>
+          <div className="mt-3 flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              disabled={parsing}
+              className="rounded-md border border-cobalt px-3 py-1.5 text-xs font-medium text-cobalt hover:bg-cobalt-soft disabled:opacity-50"
+            >
+              {parsing ? 'Reading…' : 'Upload file (PDF / TXT / MD)'}
+            </button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".pdf,.txt,.md,.markdown,application/pdf,text/plain,text/markdown"
+              onChange={onResumeFile}
+              className="hidden"
+            />
+            {form.baseResume && (
+              <span className="font-mono text-[11px] text-slate-400">
+                {form.baseResume.length.toLocaleString()} characters loaded
+              </span>
+            )}
+          </div>
+          {uploadError && <p className="mt-2 text-xs text-red-500">{uploadError}</p>}
+          <textarea
+            value={form.baseResume ?? ''}
+            onChange={(e) => setForm({ ...form, baseResume: e.target.value })}
+            rows={8}
+            placeholder="…or paste your resume text here"
+            className={`${inputCls} mt-3 font-mono text-xs`}
+          />
         </fieldset>
 
         <div className="flex items-center gap-3">

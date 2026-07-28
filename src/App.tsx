@@ -1,8 +1,8 @@
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthPage } from './pages/AuthPage'
 import { BoardPage } from './pages/BoardPage'
-import { MatchesPage } from './pages/MatchesPage'
 import { ResumePage } from './pages/ResumePage'
+import { ResumesPage } from './pages/ResumesPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { Layout } from './components/Layout'
@@ -16,7 +16,9 @@ export default function App() {
         <Route element={<ProtectedRoute />}>
           <Route element={<Layout />}>
             <Route path="/" element={<BoardPage />} />
-            <Route path="/matches" element={<MatchesPage />} />
+            {/* Matches is disabled for now — job agent UI will return later */}
+            <Route path="/matches" element={<Navigate to="/" replace />} />
+            <Route path="/resumes" element={<ResumesPage />} />
             <Route path="/resume/:id" element={<ResumePage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/settings" element={<SettingsPage />} />

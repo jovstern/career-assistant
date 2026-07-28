@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { doc, getDoc, setDoc } from 'firebase/firestore'
+import { doc, getDoc, onSnapshot, setDoc } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 
 export type AIProvider = 'claude' | 'gemini' | 'openai'
@@ -23,6 +23,7 @@ interface AISettingsState {
   loaded: boolean
   load: (uid: string) => Promise<void>
   save: (uid: string, settings: AISettings) => Promise<void>
+  subscribe: (uid: string) => () => void
 }
 
 export const useAISettings = create<AISettingsState>((set) => ({
@@ -35,5 +36,10 @@ export const useAISettings = create<AISettingsState>((set) => ({
   save: async (uid, settings) => {
     await setDoc(doc(db, 'users', uid, 'settings', 'ai'), settings)
     set({ settings })
+  },
+  subscribe: (uid) => {
+    return onSnapshot(doc(db, 'users', uid, 'settings', 'ai'), (snap) => {
+      set({ settings: snap.exists() ? (snap.data() as AISettings) : emptySettings, loaded: true })
+    })
   },
 }))

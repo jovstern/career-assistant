@@ -14,6 +14,8 @@ export interface UserProfile {
   title: string
   seniority: 'junior' | 'mid' | 'senior' | 'staff' | 'principal'
   skills: string[]
+  /** Plain text of the user's own resume — the base the AI builder tailors from. */
+  baseResume?: string
   preferences: {
     roles: string[]
     locations: string[]
