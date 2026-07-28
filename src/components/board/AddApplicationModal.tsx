@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { Application } from '../../types'
+import { importJobFromUrl } from '../../lib/ai'
 
 interface Props {
   onClose: () => void
@@ -18,9 +19,36 @@ export function AddApplicationModal({ onClose, onAdd }: Props) {
     description: '',
   })
   const [busy, setBusy] = useState(false)
+  const [importing, setImporting] = useState(false)
+  const [importError, setImportError] = useState('')
 
   const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm((f) => ({ ...f, [key]: e.target.value }))
+
+  const autoFill = async () => {
+    if (!form.url.trim()) {
+      setImportError('Paste a job link first')
+      return
+    }
+    setImporting(true)
+    setImportError('')
+    try {
+      const job = await importJobFromUrl(form.url.trim())
+      setForm((f) => ({
+        ...f,
+        jobTitle: job.jobTitle || f.jobTitle,
+        company: job.company || f.company,
+        location: job.location || f.location,
+        description: job.description || f.description,
+      }))
+    } catch (err) {
+      setImportError(
+        (err instanceof Error ? err.message : 'Import failed').replace(/^Firebase: /, '')
+      )
+    } finally {
+      setImporting(false)
+    }
+  }
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -44,10 +72,31 @@ export function AddApplicationModal({ onClose, onAdd }: Props) {
         className="w-full max-w-md space-y-3 rounded-xl bg-white p-6 shadow-xl"
       >
         <h2 className="font-display text-lg font-bold">Add application</h2>
+
+        <div>
+          <div className="flex gap-2">
+            <input
+              type="url"
+              placeholder="Paste a LinkedIn job link to auto-fill…"
+              value={form.url}
+              onChange={set('url')}
+              className={inputCls}
+            />
+            <button
+              type="button"
+              onClick={autoFill}
+              disabled={importing}
+              className="shrink-0 rounded-md border border-cobalt px-3 py-2 text-xs font-medium text-cobalt hover:bg-cobalt-soft disabled:opacity-50"
+            >
+              {importing ? 'Importing…' : 'Auto-fill'}
+            </button>
+          </div>
+          {importError && <p className="mt-1 text-xs text-red-500">{importError}</p>}
+        </div>
+
         <input required placeholder="Job title" value={form.jobTitle} onChange={set('jobTitle')} className={inputCls} />
         <input required placeholder="Company" value={form.company} onChange={set('company')} className={inputCls} />
         <input placeholder="Location (optional)" value={form.location} onChange={set('location')} className={inputCls} />
-        <input type="url" placeholder="Job URL (optional)" value={form.url} onChange={set('url')} className={inputCls} />
         <textarea
           placeholder="Job description (optional — used later for resume tailoring)"
           value={form.description}

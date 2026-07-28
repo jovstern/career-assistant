@@ -10,6 +10,7 @@ initializeApp()
 const db = getFirestore()
 
 export { generateResume, analyzeSkillGap } from './ai'
+export { importJobFromUrl } from './importJob'
 const provider = new MockJobProvider()
 
 interface FetchResult {
