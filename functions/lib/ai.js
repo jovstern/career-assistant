@@ -32,74 +32,48 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.analyzeSkillGap = exports.generateResume = void 0;
 const https_1 = require("firebase-functions/v2/https");
-const params_1 = require("firebase-functions/params");
 const logger = __importStar(require("firebase-functions/logger"));
 const firestore_1 = require("firebase-admin/firestore");
-const sdk_1 = __importDefault(require("@anthropic-ai/sdk"));
-const anthropicApiKey = (0, params_1.defineSecret)('ANTHROPIC_API_KEY');
-const MODEL = 'claude-opus-5';
+const providers_1 = require("./providers");
 const db = () => (0, firestore_1.getFirestore)();
 async function loadContext(uid, applicationId) {
-    const [profileSnap, appSnap] = await Promise.all([
+    const [profileSnap, appSnap, settingsSnap] = await Promise.all([
         db().collection('users').doc(uid).get(),
         db().collection('users').doc(uid).collection('applications').doc(applicationId).get(),
+        db().collection('users').doc(uid).collection('settings').doc('ai').get(),
     ]);
     const profile = profileSnap.data();
     const application = appSnap.data();
+    const settings = settingsSnap.data();
     if (!profile)
         throw new https_1.HttpsError('failed-precondition', 'Fill in your profile first');
     if (!application)
         throw new https_1.HttpsError('not-found', 'Application not found');
-    return { profile, application };
+    if (!settings?.apiKey || !settings.provider) {
+        throw new https_1.HttpsError('failed-precondition', 'Choose an AI provider and add your API key in Settings');
+    }
+    return { profile, application, settings };
 }
-function claude() {
-    return new sdk_1.default({ apiKey: anthropicApiKey.value() });
-}
-// Server-side refusal fallbacks are enabled by default: if claude-opus-5's
-// safety classifiers decline a request, the API retries it on Anthropic's
-// recommended fallback model in the same call.
-// (typed loosely — SDK typings lag the `fallbacks: "default"` parameter)
-const FALLBACK_OPTS = {
-    betas: ['server-side-fallback-2026-07-01'],
-    fallbacks: 'default',
-};
-exports.generateResume = (0, https_1.onCall)({ secrets: [anthropicApiKey] }, async (request) => {
+exports.generateResume = (0, https_1.onCall)(async (request) => {
     const uid = request.auth?.uid;
     if (!uid)
         throw new https_1.HttpsError('unauthenticated', 'Sign in required');
     const applicationId = request.data?.applicationId;
     if (!applicationId)
         throw new https_1.HttpsError('invalid-argument', 'applicationId is required');
-    const { profile, application } = await loadContext(uid, applicationId);
-    const response = await claude().beta.messages.create({
-        model: MODEL,
-        max_tokens: 8192,
-        ...FALLBACK_OPTS,
+    const { profile, application, settings } = await loadContext(uid, applicationId);
+    const markdown = await (0, providers_1.callAI)(settings, {
+        maxTokens: 8192,
         system: 'You are an expert resume writer for tech professionals. Produce a complete, tailored resume in clean Markdown. ' +
             'Use the candidate profile for the header, title, and skills. Tailor the professional summary and skill emphasis to the target job. ' +
             'The profile has no work history: create an Experience section with 2-3 placeholder roles clearly marked like "[Company — add your role details]", ' +
             'with bullet points suggesting achievements that would resonate for this specific job so the candidate can adapt them. ' +
             'Output ONLY the resume markdown, no preamble.',
-        messages: [
-            {
-                role: 'user',
-                content: `Candidate profile:\n${JSON.stringify(profile, null, 2)}\n\nTarget job:\nTitle: ${application.jobTitle}\nCompany: ${application.company}\nDescription: ${application.description || '(none provided)'}`,
-            },
-        ],
+        user: `Candidate profile:\n${JSON.stringify(profile, null, 2)}\n\nTarget job:\nTitle: ${application.jobTitle}\nCompany: ${application.company}\nDescription: ${application.description || '(none provided)'}`,
     });
-    if (response.stop_reason === 'refusal') {
-        throw new https_1.HttpsError('unavailable', 'The AI declined this request. Try rephrasing the job description.');
-    }
-    const markdown = response.content
-        .filter((b) => b.type === 'text')
-        .map((b) => b.text)
-        .join('\n');
     const now = Date.now();
     const resumeRef = await db().collection('users').doc(uid).collection('resumes').add({
         applicationId,
@@ -112,61 +86,27 @@ exports.generateResume = (0, https_1.onCall)({ secrets: [anthropicApiKey] }, asy
         .collection('users').doc(uid)
         .collection('applications').doc(applicationId)
         .update({ resumeId: resumeRef.id, updatedAt: now });
-    logger.info(`generateResume uid=${uid} app=${applicationId} resume=${resumeRef.id}`);
+    logger.info(`generateResume uid=${uid} provider=${settings.provider} app=${applicationId} resume=${resumeRef.id}`);
     return { resumeId: resumeRef.id };
 });
-const SKILL_GAP_SCHEMA = {
-    type: 'object',
-    additionalProperties: false,
-    required: ['summary', 'items'],
-    properties: {
-        summary: { type: 'string', description: 'Two-sentence overall fit assessment' },
-        items: {
-            type: 'array',
-            items: {
-                type: 'object',
-                additionalProperties: false,
-                required: ['skill', 'priority', 'suggestion'],
-                properties: {
-                    skill: { type: 'string' },
-                    priority: { type: 'string', enum: ['high', 'medium', 'low'] },
-                    suggestion: { type: 'string', description: 'One concrete way to close this gap' },
-                },
-            },
-        },
-    },
-};
-exports.analyzeSkillGap = (0, https_1.onCall)({ secrets: [anthropicApiKey] }, async (request) => {
+exports.analyzeSkillGap = (0, https_1.onCall)(async (request) => {
     const uid = request.auth?.uid;
     if (!uid)
         throw new https_1.HttpsError('unauthenticated', 'Sign in required');
     const applicationId = request.data?.applicationId;
     if (!applicationId)
         throw new https_1.HttpsError('invalid-argument', 'applicationId is required');
-    const { profile, application } = await loadContext(uid, applicationId);
-    const response = await claude().beta.messages.create({
-        model: MODEL,
-        max_tokens: 4096,
-        ...FALLBACK_OPTS,
-        output_config: { format: { type: 'json_schema', schema: SKILL_GAP_SCHEMA } },
+    const { profile, application, settings } = await loadContext(uid, applicationId);
+    const text = await (0, providers_1.callAI)(settings, {
+        maxTokens: 4096,
         system: 'You analyze the gap between a candidate\'s current skills and a target job. ' +
             'List only skills that are genuinely missing or weak relative to the job — not skills the candidate already has. ' +
-            'Keep the list focused: 3-8 items, most important first.',
-        messages: [
-            {
-                role: 'user',
-                content: `Candidate skills: ${JSON.stringify(profile.skills ?? [])}\nCandidate title/seniority: ${profile.title} (${profile.seniority})\n\nTarget job:\nTitle: ${application.jobTitle}\nCompany: ${application.company}\nDescription: ${application.description || '(none provided)'}`,
-            },
-        ],
+            'Keep the list focused: 3-8 items, most important first. ' +
+            'Respond with ONLY valid JSON, no prose and no code fences, matching exactly: ' +
+            '{"summary": "<two-sentence fit assessment>", "items": [{"skill": "<name>", "priority": "high|medium|low", "suggestion": "<one concrete way to close this gap>"}]}',
+        user: `Candidate skills: ${JSON.stringify(profile.skills ?? [])}\nCandidate title/seniority: ${profile.title} (${profile.seniority})\n\nTarget job:\nTitle: ${application.jobTitle}\nCompany: ${application.company}\nDescription: ${application.description || '(none provided)'}`,
     });
-    if (response.stop_reason === 'refusal') {
-        throw new https_1.HttpsError('unavailable', 'The AI declined this request. Try rephrasing the job description.');
-    }
-    const text = response.content
-        .filter((b) => b.type === 'text')
-        .map((b) => b.text)
-        .join('');
-    const gap = JSON.parse(text);
+    const gap = (0, providers_1.parseJson)(text);
     const now = Date.now();
     await db()
         .collection('users').doc(uid)
@@ -179,7 +119,7 @@ exports.analyzeSkillGap = (0, https_1.onCall)({ secrets: [anthropicApiKey] }, as
         },
         updatedAt: now,
     });
-    logger.info(`analyzeSkillGap uid=${uid} app=${applicationId} items=${gap.items.length}`);
+    logger.info(`analyzeSkillGap uid=${uid} provider=${settings.provider} app=${applicationId} items=${gap.items.length}`);
     return { summary: gap.summary, itemCount: gap.items.length };
 });
 //# sourceMappingURL=ai.js.map

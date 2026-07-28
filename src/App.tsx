@@ -3,6 +3,7 @@ import { AuthPage } from './pages/AuthPage'
 import { BoardPage } from './pages/BoardPage'
 import { MatchesPage } from './pages/MatchesPage'
 import { ResumePage } from './pages/ResumePage'
+import { SettingsPage } from './pages/SettingsPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { Layout } from './components/Layout'
 import { ProtectedRoute } from './components/ProtectedRoute'
@@ -18,6 +19,7 @@ export default function App() {
             <Route path="/matches" element={<MatchesPage />} />
             <Route path="/resume/:id" element={<ResumePage />} />
             <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/settings" element={<SettingsPage />} />
           </Route>
         </Route>
       </Routes>

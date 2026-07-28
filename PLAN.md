@@ -7,7 +7,7 @@
 
 - **Frontend:** Vite + React + TypeScript + Tailwind + Zustand, react-router-dom v6
 - **Backend:** Firebase — Auth, Firestore, Cloud Functions (Blaze plan required)
-- **AI:** Claude API (`claude-sonnet-5`), called only from Cloud Functions — key never ships to client
+- **AI:** user's choice of provider (Claude / Gemini / OpenAI) with their own API key, configured in Settings; calls made only from Cloud Functions
 - **Jobs source:** mock job data for now (swappable adapter → real API later) via a scheduled Cloud Function
 - **Board:** `@dnd-kit` drag-and-drop Kanban
 

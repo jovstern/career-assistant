@@ -5,6 +5,7 @@ const navItems = [
   { to: '/', label: 'Board', code: 'BRD' },
   { to: '/matches', label: 'Matches', code: 'MTC' },
   { to: '/profile', label: 'Profile', code: 'PRF' },
+  { to: '/settings', label: 'Settings', code: 'SET' },
 ]
 
 export function Layout() {
