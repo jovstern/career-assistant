@@ -11,7 +11,8 @@ export async function generateResume(applicationId: string): Promise<string> {
 
 export async function testAIConnection(input: {
   provider: string
-  apiKey: string
+  /** Omit to test the key already saved server-side. */
+  apiKey?: string
   model?: string
 }): Promise<{ ok: boolean; reply: string }> {
   const fn = httpsCallable<typeof input, { ok: boolean; reply: string }>(

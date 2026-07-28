@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { ShieldCheck } from 'lucide-react'
 import { useAuth } from '../stores/useAuth'
 import { useAISettings, DEFAULT_MODELS } from '../stores/useAISettings'
 import type { AIProvider } from '../stores/useAISettings'
@@ -16,15 +17,44 @@ const inputCls =
 
 export function SettingsPage() {
   const user = useAuth((s) => s.user)
-  const { settings, loaded, load, save } = useAISettings()
-  const [form, setForm] = useState(settings)
+  const { settings, loaded, save, subscribe } = useAISettings()
+  const [provider, setProvider] = useState<AIProvider>(settings.provider)
+  const [model, setModel] = useState(settings.model ?? '')
+  const [apiKeyInput, setApiKeyInput] = useState('')
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
   const [testing, setTesting] = useState(false)
   const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null)
 
+  useEffect(() => {
+    if (user) return subscribe(user.uid)
+  }, [user, subscribe])
+
+  useEffect(() => {
+    setProvider(settings.provider)
+    setModel(settings.model ?? '')
+  }, [settings])
+
+  if (!user) return null
+  if (!loaded) return <p className="p-6 font-mono text-sm text-slate-400">loading settings…</p>
+
+  const providerInfo = PROVIDERS.find((p) => p.id === provider)!
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    if (!settings.hasKey && !apiKeyInput.trim()) {
+      setError('API key is required')
+      return
+    }
+    await save(user.uid, { provider, model: model.trim() || undefined }, apiKeyInput || undefined)
+    setApiKeyInput('')
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
+  }
+
   const runTest = async () => {
-    if (!form.apiKey.trim()) {
+    if (!settings.hasKey && !apiKeyInput.trim()) {
       setTestResult({ ok: false, message: 'Enter an API key first' })
       return
     }
@@ -32,13 +62,13 @@ export function SettingsPage() {
     setTestResult(null)
     try {
       await testAIConnection({
-        provider: form.provider,
-        apiKey: form.apiKey.trim(),
-        model: form.model,
+        provider,
+        apiKey: apiKeyInput.trim() || undefined,
+        model: model.trim() || undefined,
       })
       setTestResult({
         ok: true,
-        message: `Connected — ${form.model?.trim() || DEFAULT_MODELS[form.provider]} responded`,
+        message: `Connected — ${model.trim() || DEFAULT_MODELS[provider]} responded`,
       })
     } catch (err) {
       setTestResult({
@@ -50,37 +80,11 @@ export function SettingsPage() {
     }
   }
 
-  useEffect(() => {
-    if (user && !loaded) void load(user.uid)
-  }, [user, loaded, load])
-
-  useEffect(() => {
-    setForm(settings)
-  }, [settings])
-
-  if (!user) return null
-  if (!loaded) return <p className="p-6 font-mono text-sm text-slate-400">loading settings…</p>
-
-  const provider = PROVIDERS.find((p) => p.id === form.provider)!
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-    if (!form.apiKey.trim()) {
-      setError('API key is required')
-      return
-    }
-    await save(user.uid, { ...form, apiKey: form.apiKey.trim() })
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
-  }
-
   return (
     <div className="mx-auto max-w-2xl p-6">
       <h1 className="font-display text-xl font-bold">Settings</h1>
       <p className="mt-1 text-sm text-slate-500">
-        The AI provider powers the resume builder, skill gap analysis, and interview prep. Your key
-        is stored in your private account data and used only server-side.
+        The AI provider powers the resume builder, skill gap analysis, and interview prep.
       </p>
 
       <form onSubmit={submit} className="mt-6 space-y-5">
@@ -91,9 +95,9 @@ export function SettingsPage() {
               <button
                 type="button"
                 key={p.id}
-                onClick={() => setForm({ ...form, provider: p.id })}
+                onClick={() => setProvider(p.id)}
                 className={`rounded-lg border px-4 py-3 text-sm font-medium transition-colors ${
-                  form.provider === p.id
+                  provider === p.id
                     ? 'border-cobalt bg-cobalt-soft text-cobalt'
                     : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
                 }`}
@@ -105,19 +109,29 @@ export function SettingsPage() {
         </div>
 
         <div>
-          <label className={labelCls}>{provider.name} API key</label>
+          <label className={labelCls}>{providerInfo.name} API key</label>
           <input
             type="password"
-            value={form.apiKey}
-            placeholder={provider.keyHint}
-            onChange={(e) => setForm({ ...form, apiKey: e.target.value })}
+            value={apiKeyInput}
+            placeholder={
+              settings.hasKey ? '••••••••••••  key saved — type to replace' : providerInfo.keyHint
+            }
+            onChange={(e) => setApiKeyInput(e.target.value)}
             className={inputCls}
             autoComplete="off"
           />
+          <p className="mt-1.5 flex items-start gap-1.5 text-xs text-slate-500">
+            <ShieldCheck size={14} className="mt-0.5 shrink-0 text-stage-offer" />
+            <span>
+              Your key is stored <strong>write-only</strong> and encrypted at rest: once saved, it
+              can't be read back by this app, your browser, or anyone else — it's used exclusively
+              inside secure server functions to call {providerInfo.name} on your behalf.
+            </span>
+          </p>
           <p className="mt-1 text-xs text-slate-400">
             Get one at{' '}
-            <a href={provider.keyUrl} target="_blank" rel="noreferrer" className="text-cobalt hover:underline">
-              {provider.keyUrl.replace('https://', '')}
+            <a href={providerInfo.keyUrl} target="_blank" rel="noreferrer" className="text-cobalt hover:underline">
+              {providerInfo.keyUrl.replace('https://', '')}
             </a>
           </p>
         </div>
@@ -125,9 +139,9 @@ export function SettingsPage() {
         <div>
           <label className={labelCls}>Model (optional)</label>
           <input
-            value={form.model ?? ''}
-            placeholder={`default: ${DEFAULT_MODELS[form.provider]}`}
-            onChange={(e) => setForm({ ...form, model: e.target.value || undefined })}
+            value={model}
+            placeholder={`default: ${DEFAULT_MODELS[provider]}`}
+            onChange={(e) => setModel(e.target.value)}
             className={inputCls}
           />
         </div>

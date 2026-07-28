@@ -20,7 +20,7 @@ const navItems = [
 
 function AIStatus() {
   const { settings, loaded } = useAISettings()
-  const connected = loaded && !!settings.apiKey
+  const connected = loaded && settings.hasKey
   return (
     <NavLink
       to="/settings"

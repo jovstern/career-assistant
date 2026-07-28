@@ -40,19 +40,18 @@ const firestore_1 = require("firebase-admin/firestore");
 const providers_1 = require("./providers");
 const db = () => (0, firestore_1.getFirestore)();
 async function loadContext(uid, applicationId) {
-    const [profileSnap, appSnap, settingsSnap] = await Promise.all([
+    const [profileSnap, appSnap, settings] = await Promise.all([
         db().collection('users').doc(uid).get(),
         db().collection('users').doc(uid).collection('applications').doc(applicationId).get(),
-        db().collection('users').doc(uid).collection('settings').doc('ai').get(),
+        (0, providers_1.loadAISettings)(uid),
     ]);
     const profile = profileSnap.data();
     const application = appSnap.data();
-    const settings = settingsSnap.data();
     if (!profile)
         throw new https_1.HttpsError('failed-precondition', 'Fill in your profile first');
     if (!application)
         throw new https_1.HttpsError('not-found', 'Application not found');
-    if (!settings?.apiKey || !settings.provider) {
+    if (!settings) {
         throw new https_1.HttpsError('failed-precondition', 'Choose an AI provider and add your API key in Settings');
     }
     return { profile, application, settings };
@@ -62,10 +61,20 @@ exports.testAIConnection = (0, https_1.onCall)(async (request) => {
     if (!uid)
         throw new https_1.HttpsError('unauthenticated', 'Sign in required');
     const { provider, apiKey, model } = (request.data ?? {});
-    if (!provider || !apiKey?.trim()) {
-        throw new https_1.HttpsError('invalid-argument', 'Provider and API key are required');
+    if (!provider)
+        throw new https_1.HttpsError('invalid-argument', 'Provider is required');
+    // Test either the key typed in the form, or (if none) the stored key.
+    let settings;
+    if (apiKey?.trim()) {
+        settings = { provider, apiKey: apiKey.trim(), model };
     }
-    const text = await (0, providers_1.callAI)({ provider, apiKey: apiKey.trim(), model }, {
+    else {
+        const stored = await (0, providers_1.loadAISettings)(uid);
+        if (!stored)
+            throw new https_1.HttpsError('invalid-argument', 'Enter an API key first');
+        settings = { ...stored, provider, model: model ?? stored.model };
+    }
+    const text = await (0, providers_1.callAI)(settings, {
         maxTokens: 1000,
         system: 'You are a connectivity test. Reply with the single word: OK',
         user: 'ping',

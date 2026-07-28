@@ -1,8 +1,6 @@
 import { HttpsError, onCall } from 'firebase-functions/v2/https'
 import * as logger from 'firebase-functions/logger'
-import { getFirestore } from 'firebase-admin/firestore'
-import { callAI, parseJson } from './providers'
-import type { AISettings } from './providers'
+import { callAI, loadAISettings, parseJson } from './providers'
 
 interface ImportedJob {
   jobTitle: string
@@ -81,10 +79,8 @@ function fromLinkedInMarkup(html: string): ImportedJob | null {
 }
 
 async function fromAI(uid: string, pageText: string): Promise<ImportedJob | null> {
-  const settingsSnap = await getFirestore()
-    .collection('users').doc(uid).collection('settings').doc('ai').get()
-  const settings = settingsSnap.data() as AISettings | undefined
-  if (!settings?.apiKey || !settings.provider) return null
+  const settings = await loadAISettings(uid)
+  if (!settings) return null
 
   const text = await callAI(settings, {
     maxTokens: 4096,

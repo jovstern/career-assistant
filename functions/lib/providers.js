@@ -4,10 +4,35 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DEFAULT_MODELS = void 0;
+exports.loadAISettings = loadAISettings;
 exports.callAI = callAI;
 exports.parseJson = parseJson;
 const sdk_1 = __importDefault(require("@anthropic-ai/sdk"));
 const https_1 = require("firebase-functions/v2/https");
+const firestore_1 = require("firebase-admin/firestore");
+/**
+ * Load the user's AI settings. The API key is write-only from the client:
+ * it lives in users/{uid}/secrets/ai, readable only via the Admin SDK.
+ * (Falls back to the legacy apiKey field on the settings doc.)
+ */
+async function loadAISettings(uid) {
+    const db = (0, firestore_1.getFirestore)();
+    const [settingsSnap, secretsSnap] = await Promise.all([
+        db.collection('users').doc(uid).collection('settings').doc('ai').get(),
+        db.collection('users').doc(uid).collection('secrets').doc('ai').get(),
+    ]);
+    const settings = settingsSnap.data();
+    if (!settings?.provider)
+        return null;
+    const apiKey = (secretsSnap.data()?.apiKey ?? settings.apiKey);
+    if (!apiKey)
+        return null;
+    return {
+        provider: settings.provider,
+        apiKey,
+        model: settings.model ?? undefined,
+    };
+}
 exports.DEFAULT_MODELS = {
     claude: 'claude-opus-5',
     gemini: 'gemini-2.5-pro',

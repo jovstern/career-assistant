@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { HttpsError } from 'firebase-functions/v2/https'
+import { getFirestore } from 'firebase-admin/firestore'
 
 export type AIProvider = 'claude' | 'gemini' | 'openai'
 
@@ -13,6 +14,28 @@ export interface AIRequest {
   system: string
   user: string
   maxTokens: number
+}
+
+/**
+ * Load the user's AI settings. The API key is write-only from the client:
+ * it lives in users/{uid}/secrets/ai, readable only via the Admin SDK.
+ * (Falls back to the legacy apiKey field on the settings doc.)
+ */
+export async function loadAISettings(uid: string): Promise<AISettings | null> {
+  const db = getFirestore()
+  const [settingsSnap, secretsSnap] = await Promise.all([
+    db.collection('users').doc(uid).collection('settings').doc('ai').get(),
+    db.collection('users').doc(uid).collection('secrets').doc('ai').get(),
+  ])
+  const settings = settingsSnap.data()
+  if (!settings?.provider) return null
+  const apiKey = (secretsSnap.data()?.apiKey ?? settings.apiKey) as string | undefined
+  if (!apiKey) return null
+  return {
+    provider: settings.provider as AIProvider,
+    apiKey,
+    model: (settings.model as string | null) ?? undefined,
+  }
 }
 
 export const DEFAULT_MODELS: Record<AIProvider, string> = {

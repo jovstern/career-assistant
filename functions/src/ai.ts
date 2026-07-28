@@ -1,23 +1,22 @@
 import { HttpsError, onCall } from 'firebase-functions/v2/https'
 import * as logger from 'firebase-functions/logger'
 import { getFirestore } from 'firebase-admin/firestore'
-import { callAI, parseJson } from './providers'
+import { callAI, loadAISettings, parseJson } from './providers'
 import type { AISettings } from './providers'
 
 const db = () => getFirestore()
 
 async function loadContext(uid: string, applicationId: string) {
-  const [profileSnap, appSnap, settingsSnap] = await Promise.all([
+  const [profileSnap, appSnap, settings] = await Promise.all([
     db().collection('users').doc(uid).get(),
     db().collection('users').doc(uid).collection('applications').doc(applicationId).get(),
-    db().collection('users').doc(uid).collection('settings').doc('ai').get(),
+    loadAISettings(uid),
   ])
   const profile = profileSnap.data()
   const application = appSnap.data()
-  const settings = settingsSnap.data() as AISettings | undefined
   if (!profile) throw new HttpsError('failed-precondition', 'Fill in your profile first')
   if (!application) throw new HttpsError('not-found', 'Application not found')
-  if (!settings?.apiKey || !settings.provider) {
+  if (!settings) {
     throw new HttpsError('failed-precondition', 'Choose an AI provider and add your API key in Settings')
   }
   return { profile, application, settings }
@@ -31,12 +30,20 @@ export const testAIConnection = onCall(async (request) => {
     apiKey?: string
     model?: string
   }
-  if (!provider || !apiKey?.trim()) {
-    throw new HttpsError('invalid-argument', 'Provider and API key are required')
+  if (!provider) throw new HttpsError('invalid-argument', 'Provider is required')
+
+  // Test either the key typed in the form, or (if none) the stored key.
+  let settings: AISettings
+  if (apiKey?.trim()) {
+    settings = { provider, apiKey: apiKey.trim(), model }
+  } else {
+    const stored = await loadAISettings(uid)
+    if (!stored) throw new HttpsError('invalid-argument', 'Enter an API key first')
+    settings = { ...stored, provider, model: model ?? stored.model }
   }
 
   const text = await callAI(
-    { provider, apiKey: apiKey.trim(), model },
+    settings,
     {
       maxTokens: 1000,
       system: 'You are a connectivity test. Reply with the single word: OK',

@@ -36,7 +36,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.importJobFromUrl = void 0;
 const https_1 = require("firebase-functions/v2/https");
 const logger = __importStar(require("firebase-functions/logger"));
-const firestore_1 = require("firebase-admin/firestore");
 const providers_1 = require("./providers");
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36';
 function stripHtml(html) {
@@ -102,10 +101,8 @@ function fromLinkedInMarkup(html) {
     };
 }
 async function fromAI(uid, pageText) {
-    const settingsSnap = await (0, firestore_1.getFirestore)()
-        .collection('users').doc(uid).collection('settings').doc('ai').get();
-    const settings = settingsSnap.data();
-    if (!settings?.apiKey || !settings.provider)
+    const settings = await (0, providers_1.loadAISettings)(uid);
+    if (!settings)
         return null;
     const text = await (0, providers_1.callAI)(settings, {
         maxTokens: 4096,
