@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.analyzeSkillGap = exports.generateResume = void 0;
+exports.analyzeSkillGap = exports.generateResume = exports.testAIConnection = void 0;
 const https_1 = require("firebase-functions/v2/https");
 const logger = __importStar(require("firebase-functions/logger"));
 const firestore_1 = require("firebase-admin/firestore");
@@ -57,6 +57,22 @@ async function loadContext(uid, applicationId) {
     }
     return { profile, application, settings };
 }
+exports.testAIConnection = (0, https_1.onCall)(async (request) => {
+    const uid = request.auth?.uid;
+    if (!uid)
+        throw new https_1.HttpsError('unauthenticated', 'Sign in required');
+    const { provider, apiKey, model } = (request.data ?? {});
+    if (!provider || !apiKey?.trim()) {
+        throw new https_1.HttpsError('invalid-argument', 'Provider and API key are required');
+    }
+    const text = await (0, providers_1.callAI)({ provider, apiKey: apiKey.trim(), model }, {
+        maxTokens: 1000,
+        system: 'You are a connectivity test. Reply with the single word: OK',
+        user: 'ping',
+    });
+    logger.info(`testAIConnection uid=${uid} provider=${provider} ok`);
+    return { ok: true, reply: text.trim().slice(0, 40) };
+});
 exports.generateResume = (0, https_1.onCall)(async (request) => {
     const uid = request.auth?.uid;
     if (!uid)

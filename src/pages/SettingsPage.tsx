@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../stores/useAuth'
 import { useAISettings, DEFAULT_MODELS } from '../stores/useAISettings'
 import type { AIProvider } from '../stores/useAISettings'
+import { testAIConnection } from '../lib/ai'
 
 const PROVIDERS: { id: AIProvider; name: string; keyHint: string; keyUrl: string }[] = [
   { id: 'claude', name: 'Claude', keyHint: 'sk-ant-…', keyUrl: 'https://platform.claude.com/settings/keys' },
@@ -19,6 +20,35 @@ export function SettingsPage() {
   const [form, setForm] = useState(settings)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
+  const [testing, setTesting] = useState(false)
+  const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null)
+
+  const runTest = async () => {
+    if (!form.apiKey.trim()) {
+      setTestResult({ ok: false, message: 'Enter an API key first' })
+      return
+    }
+    setTesting(true)
+    setTestResult(null)
+    try {
+      await testAIConnection({
+        provider: form.provider,
+        apiKey: form.apiKey.trim(),
+        model: form.model,
+      })
+      setTestResult({
+        ok: true,
+        message: `Connected — ${form.model?.trim() || DEFAULT_MODELS[form.provider]} responded`,
+      })
+    } catch (err) {
+      setTestResult({
+        ok: false,
+        message: (err instanceof Error ? err.message : 'Connection failed').replace(/^Firebase: /, ''),
+      })
+    } finally {
+      setTesting(false)
+    }
+  }
 
   useEffect(() => {
     if (user && !loaded) void load(user.uid)
@@ -110,8 +140,22 @@ export function SettingsPage() {
           >
             Save settings
           </button>
+          <button
+            type="button"
+            onClick={runTest}
+            disabled={testing}
+            className="rounded-md border border-cobalt px-4 py-2 text-sm font-medium text-cobalt hover:bg-cobalt-soft disabled:opacity-50"
+          >
+            {testing ? 'Testing…' : 'Test connection'}
+          </button>
           {saved && <span className="font-mono text-xs text-stage-offer">saved ✓</span>}
         </div>
+        {testResult && (
+          <p className={`text-xs ${testResult.ok ? 'text-stage-offer' : 'text-red-500'}`}>
+            {testResult.ok ? '✓ ' : '✕ '}
+            {testResult.message}
+          </p>
+        )}
       </form>
     </div>
   )

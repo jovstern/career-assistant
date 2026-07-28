@@ -9,6 +9,19 @@ export async function generateResume(applicationId: string): Promise<string> {
   return res.data.resumeId
 }
 
+export async function testAIConnection(input: {
+  provider: string
+  apiKey: string
+  model?: string
+}): Promise<{ ok: boolean; reply: string }> {
+  const fn = httpsCallable<typeof input, { ok: boolean; reply: string }>(
+    getFunctions(),
+    'testAIConnection'
+  )
+  const res = await fn(input)
+  return res.data
+}
+
 export interface ImportedJob {
   jobTitle: string
   company: string

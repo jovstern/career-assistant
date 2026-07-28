@@ -23,6 +23,30 @@ async function loadContext(uid: string, applicationId: string) {
   return { profile, application, settings }
 }
 
+export const testAIConnection = onCall(async (request) => {
+  const uid = request.auth?.uid
+  if (!uid) throw new HttpsError('unauthenticated', 'Sign in required')
+  const { provider, apiKey, model } = (request.data ?? {}) as {
+    provider?: AISettings['provider']
+    apiKey?: string
+    model?: string
+  }
+  if (!provider || !apiKey?.trim()) {
+    throw new HttpsError('invalid-argument', 'Provider and API key are required')
+  }
+
+  const text = await callAI(
+    { provider, apiKey: apiKey.trim(), model },
+    {
+      maxTokens: 1000,
+      system: 'You are a connectivity test. Reply with the single word: OK',
+      user: 'ping',
+    }
+  )
+  logger.info(`testAIConnection uid=${uid} provider=${provider} ok`)
+  return { ok: true, reply: text.trim().slice(0, 40) }
+})
+
 export const generateResume = onCall(async (request) => {
   const uid = request.auth?.uid
   if (!uid) throw new HttpsError('unauthenticated', 'Sign in required')
