@@ -55,9 +55,10 @@ export function Layout() {
       <aside className="flex w-56 shrink-0 flex-col bg-ink text-slate-300 print:hidden">
         <div className="px-5 py-6">
           <span className="font-display text-lg font-bold text-white">
-            Career<span className="text-cobalt">/</span>Assistant
+            Career<span className="text-white">/</span>Assistant
           </span>
         </div>
+
         <nav className="flex flex-col gap-1 px-3">
           {navItems.map(({ to, label, Icon }) => (
             <NavLink
@@ -85,6 +86,7 @@ export function Layout() {
             </span>
           </div>
         </nav>
+
         <div className="mt-auto px-3 pb-2">
           <AIStatus />
         </div>
@@ -98,6 +100,7 @@ export function Layout() {
           </button>
         </div>
       </aside>
+
       <main className="flex-1 overflow-auto">
         <Outlet />
       </main>

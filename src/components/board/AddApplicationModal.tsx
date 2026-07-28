@@ -98,7 +98,7 @@ export function AddApplicationModal({ onClose, onAdd }: Props) {
         <input required placeholder="Company" value={form.company} onChange={set('company')} className={inputCls} />
         <input placeholder="Location (optional)" value={form.location} onChange={set('location')} className={inputCls} />
         <textarea
-          placeholder="Job description (optional — used later for resume tailoring)"
+          placeholder="About the job - used later for resume tailoring"
           value={form.description}
           onChange={set('description')}
           rows={4}
