@@ -4,11 +4,14 @@ import type { Application, Stage } from '../../types'
 import { STAGES, STAGE_LABELS } from '../../types'
 import { analyzeSkillGap, generateResume } from '../../lib/ai'
 import { SkillGapPanel } from './SkillGapPanel'
+import { InterviewSteps } from './InterviewSteps'
 
 interface Props {
   application: Application
   onClose: () => void
-  onUpdate: (data: Partial<Pick<Application, 'stage' | 'notes' | 'skillGap'>>) => Promise<void>
+  onUpdate: (
+    data: Partial<Pick<Application, 'stage' | 'notes' | 'skillGap' | 'interviewSteps'>>
+  ) => Promise<void>
   onDelete: () => Promise<void>
 }
 
@@ -100,6 +103,18 @@ export function CardModal({ application, onClose, onUpdate, onDelete }: Props) {
             ))}
           </div>
         </div>
+
+        {(application.stage === 'interviewing' || (application.interviewSteps?.length ?? 0) > 0) && (
+          <div className="mt-4">
+            <label className="font-mono text-[11px] uppercase text-slate-400">
+              Interview steps
+            </label>
+            <InterviewSteps
+              steps={application.interviewSteps ?? []}
+              onChange={(interviewSteps) => void onUpdate({ interviewSteps })}
+            />
+          </div>
+        )}
 
         {application.url && (
           <div className="mt-4">

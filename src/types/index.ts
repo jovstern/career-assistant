@@ -37,6 +37,12 @@ export interface SkillGap {
   analyzedAt: number
 }
 
+export interface InterviewStep {
+  id: string
+  label: string
+  done: boolean
+}
+
 export interface Application {
   id: string
   company: string
@@ -49,6 +55,7 @@ export interface Application {
   source: 'manual' | 'agent'
   resumeId?: string
   skillGap?: SkillGap
+  interviewSteps?: InterviewStep[]
   createdAt: number
   updatedAt: number
 }
