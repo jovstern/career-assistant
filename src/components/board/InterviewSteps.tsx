@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Plus, X } from 'lucide-react'
 import type { InterviewStep } from '../../types'
+import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Progress } from '@/components/ui/progress'
 
@@ -76,14 +77,16 @@ export function InterviewSteps({ steps, onChange }: Props) {
                 step.done ? 'text-slate-400 line-through' : ''
               }`}
             />
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="icon-sm"
               onClick={() => remove(step.id)}
               className="text-slate-300 opacity-0 transition-opacity hover:text-red-500 group-hover:opacity-100"
               title="Remove step"
             >
               <X size={14} />
-            </button>
+            </Button>
           </li>
         ))}
       </ul>
@@ -101,27 +104,31 @@ export function InterviewSteps({ steps, onChange }: Props) {
           placeholder="Add a step… e.g. Phone screen"
           className="w-full rounded-md border border-slate-200 px-2 py-1.5 text-sm focus:border-cobalt focus:outline-none"
         />
-        <button
+        <Button
           type="button"
+          variant="outline"
+          size="icon-sm"
           onClick={() => add(newLabel)}
-          className="shrink-0 rounded-md border border-cobalt p-1.5 text-cobalt hover:bg-cobalt-soft"
+          className="shrink-0 border-cobalt text-cobalt hover:bg-cobalt-soft hover:text-cobalt"
           title="Add step"
         >
           <Plus size={14} />
-        </button>
+        </Button>
       </div>
 
       {local.length === 0 && (
         <div className="mt-2 flex flex-wrap gap-1.5">
           {SUGGESTIONS.map((s) => (
-            <button
+            <Button
               key={s}
               type="button"
+              variant="secondary"
+              size="sm"
               onClick={() => add(s)}
-              className="rounded-full bg-slate-100 px-2.5 py-1 text-xs text-slate-500 hover:bg-cobalt-soft hover:text-cobalt"
+              className="h-auto rounded-full bg-slate-100 px-2.5 py-1 text-xs font-normal text-slate-500 hover:bg-cobalt-soft hover:text-cobalt"
             >
               + {s}
-            </button>
+            </Button>
           ))}
         </div>
       )}

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
+import { Button } from '@/components/ui/button'
 import { useAuth } from '../stores/useAuth'
 
 export function AuthPage() {
@@ -32,13 +33,9 @@ export function AuthPage() {
         <p className="mt-2 font-mono text-xs text-slate-500">
           pipeline control for your job hunt
         </p>
-        <button
-          onClick={google}
-          disabled={busy}
-          className="mt-10 w-full rounded-md bg-cobalt py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-        >
+        <Button onClick={google} disabled={busy} className="mt-10 h-auto w-full py-2.5">
           {busy ? 'Signing in…' : 'Continue with Google'}
-        </button>
+        </Button>
         {error && <p className="mt-3 text-xs text-red-400">{error}</p>}
       </div>
     </div>

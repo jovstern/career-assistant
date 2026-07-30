@@ -20,7 +20,12 @@ interface ApplicationsState {
   update: (
     uid: string,
     id: string,
-    data: Partial<Pick<Application, 'stage' | 'notes' | 'skillGap' | 'interviewSteps'>>
+    data: Partial<
+      Pick<
+        Application,
+        'stage' | 'notes' | 'skillGap' | 'interviewSteps' | 'contactEmail' | 'contactPhone'
+      >
+    >
   ) => Promise<void>
   remove: (uid: string, id: string) => Promise<void>
 }

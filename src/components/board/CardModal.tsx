@@ -7,12 +7,18 @@ import { SkillGapPanel } from './SkillGapPanel'
 import { InterviewSteps } from './InterviewSteps'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { Button } from '@/components/ui/button'
 
 interface Props {
   application: Application
   onClose: () => void
   onUpdate: (
-    data: Partial<Pick<Application, 'stage' | 'notes' | 'skillGap' | 'interviewSteps'>>
+    data: Partial<
+      Pick<
+        Application,
+        'stage' | 'notes' | 'skillGap' | 'interviewSteps' | 'contactEmail' | 'contactPhone'
+      >
+    >
   ) => Promise<void>
   onDelete: () => Promise<void>
 }
@@ -20,8 +26,19 @@ interface Props {
 export function CardModal({ application, onClose, onUpdate, onDelete }: Props) {
   const navigate = useNavigate()
   const [notes, setNotes] = useState(application.notes)
+  const [contactEmail, setContactEmail] = useState(application.contactEmail ?? '')
+  const [contactPhone, setContactPhone] = useState(application.contactPhone ?? '')
   const [aiBusy, setAiBusy] = useState<'resume' | 'gap' | null>(null)
   const [aiError, setAiError] = useState('')
+
+  const saveContacts = async () => {
+    if (
+      contactEmail !== (application.contactEmail ?? '') ||
+      contactPhone !== (application.contactPhone ?? '')
+    ) {
+      await onUpdate({ contactEmail, contactPhone })
+    }
+  }
 
   const runResume = async () => {
     setAiBusy('resume')
@@ -136,6 +153,28 @@ export function CardModal({ application, onClose, onUpdate, onDelete }: Props) {
         )}
 
         <div className="mt-4">
+          <label className="font-mono text-[11px] uppercase text-slate-400">Contact</label>
+          <div className="mt-1 flex gap-2">
+            <input
+              type="email"
+              value={contactEmail}
+              onChange={(e) => setContactEmail(e.target.value)}
+              onBlur={saveContacts}
+              placeholder="Email"
+              className="w-full rounded-md border border-slate-200 px-2 py-1.5 text-sm focus:border-cobalt focus:outline-none"
+            />
+            <input
+              type="tel"
+              value={contactPhone}
+              onChange={(e) => setContactPhone(e.target.value)}
+              onBlur={saveContacts}
+              placeholder="Phone"
+              className="w-full rounded-md border border-slate-200 px-2 py-1.5 text-sm focus:border-cobalt focus:outline-none"
+            />
+          </div>
+        </div>
+
+        <div className="mt-4">
           <label className="font-mono text-[11px] uppercase text-slate-400">Notes</label>
           <textarea
             value={notes}
@@ -150,28 +189,28 @@ export function CardModal({ application, onClose, onUpdate, onDelete }: Props) {
         <div className="mt-4">
           <label className="font-mono text-[11px] uppercase text-slate-400">AI tools</label>
           <div className="mt-1 flex flex-wrap gap-2">
-            <button
-              onClick={runResume}
-              disabled={aiBusy !== null}
-              className="rounded-md bg-cobalt px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
-            >
+            <Button size="sm" onClick={runResume} disabled={aiBusy !== null} className="text-xs">
               {aiBusy === 'resume' ? 'Generating…' : application.resumeId ? 'Regenerate resume' : 'Generate resume'}
-            </button>
+            </Button>
             {application.resumeId && (
-              <button
+              <Button
+                size="sm"
+                variant="outline"
                 onClick={() => navigate(`/resume/${application.resumeId}`)}
-                className="rounded-md border border-cobalt px-3 py-1.5 text-xs font-medium text-cobalt hover:bg-cobalt-soft"
+                className="border-cobalt text-xs text-cobalt hover:bg-cobalt-soft hover:text-cobalt"
               >
                 View resume
-              </button>
+              </Button>
             )}
-            <button
+            <Button
+              size="sm"
+              variant="outline"
               onClick={runGap}
               disabled={aiBusy !== null}
-              className="rounded-md border border-cobalt px-3 py-1.5 text-xs font-medium text-cobalt hover:bg-cobalt-soft disabled:opacity-50"
+              className="border-cobalt text-xs text-cobalt hover:bg-cobalt-soft hover:text-cobalt"
             >
               {aiBusy === 'gap' ? 'Analyzing…' : application.skillGap ? 'Re-analyze skill gap' : 'Analyze skill gap'}
-            </button>
+            </Button>
           </div>
           {aiError && <p className="mt-2 text-xs text-red-500">{aiError}</p>}
           {application.skillGap && (
@@ -180,15 +219,17 @@ export function CardModal({ application, onClose, onUpdate, onDelete }: Props) {
         </div>
 
         <div className="mt-4 flex justify-end">
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={async () => {
               await onDelete()
               onClose()
             }}
-            className="text-xs text-red-500 hover:underline"
+            className="text-xs text-red-500 hover:bg-red-50 hover:text-red-600"
           >
             Delete application
-          </button>
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

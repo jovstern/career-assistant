@@ -7,6 +7,7 @@ import { generateResume } from '../lib/ai'
 import { useAuth } from '../stores/useAuth'
 import { useApplications } from '../stores/useApplications'
 import { useProfile } from '../stores/useProfile'
+import { Button } from '@/components/ui/button'
 import {
   Select,
   SelectContent,
@@ -99,14 +100,10 @@ export function ResumesPage() {
               ))}
             </SelectContent>
           </Select>
-          <button
-            onClick={build}
-            disabled={generating || !selectedAppId}
-            className="flex shrink-0 items-center gap-1.5 rounded-md bg-cobalt px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
-          >
+          <Button onClick={build} disabled={generating || !selectedAppId} className="shrink-0">
             <Sparkles size={14} />
             {generating ? 'Building…' : 'Build resume'}
-          </button>
+          </Button>
         </div>
         {applications.length === 0 && (
           <p className="mt-2 text-xs text-slate-400">

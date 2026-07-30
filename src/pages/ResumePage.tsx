@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
+import { Button } from '@/components/ui/button'
 import { doc, getDoc } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import { useAuth } from '../stores/useAuth'
@@ -37,24 +38,20 @@ export function ResumePage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => navigator.clipboard.writeText(resume.markdown)}
-            className="rounded-md border border-slate-300 px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-100"
+            className="text-xs"
           >
             Copy markdown
-          </button>
-          <button
-            onClick={() => window.print()}
-            className="rounded-md bg-cobalt px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
-          >
+          </Button>
+          <Button size="sm" onClick={() => window.print()} className="text-xs">
             Export PDF
-          </button>
-          <Link
-            to="/"
-            className="rounded-md px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-100"
-          >
+          </Button>
+          <Button variant="ghost" size="sm" className="text-xs text-slate-500" render={<Link to="/" />}>
             Back to board
-          </Link>
+          </Button>
         </div>
       </div>
 

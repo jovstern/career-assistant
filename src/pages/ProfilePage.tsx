@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { Button } from '@/components/ui/button'
 import type { UserProfile } from '../types'
 
 const inputCls =
@@ -205,14 +206,16 @@ export function ProfilePage() {
             your board to produce tailored versions.
           </p>
           <div className="mt-3 flex items-center gap-3">
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
               onClick={() => fileRef.current?.click()}
               disabled={parsing}
-              className="rounded-md border border-cobalt px-3 py-1.5 text-xs font-medium text-cobalt hover:bg-cobalt-soft disabled:opacity-50"
+              className="border-cobalt text-xs text-cobalt hover:bg-cobalt-soft hover:text-cobalt"
             >
               {parsing ? 'Reading…' : 'Upload file (PDF / TXT / MD)'}
-            </button>
+            </Button>
             <input
               ref={fileRef}
               type="file"
@@ -237,12 +240,7 @@ export function ProfilePage() {
         </fieldset>
 
         <div className="flex items-center gap-3">
-          <button
-            type="submit"
-            className="rounded-md bg-cobalt px-4 py-2 text-sm font-medium text-white hover:opacity-90"
-          >
-            Save profile
-          </button>
+          <Button type="submit">Save profile</Button>
           {saved && <span className="font-mono text-xs text-stage-offer">saved ✓</span>}
         </div>
       </form>

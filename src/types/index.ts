@@ -52,6 +52,8 @@ export interface Application {
   description?: string
   stage: Stage
   notes: string
+  contactEmail?: string
+  contactPhone?: string
   source: 'manual' | 'agent'
   resumeId?: string
   skillGap?: SkillGap

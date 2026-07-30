@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Button } from '@/components/ui/button'
 import { DndContext, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import type { DragEndEvent } from '@dnd-kit/core'
 import { useAuth } from '../stores/useAuth'
@@ -44,12 +45,7 @@ export function BoardPage() {
     <div className="flex h-full flex-col p-6">
       <div className="flex items-center justify-between">
         <h1 className="font-display text-xl font-bold">Pipeline</h1>
-        <button
-          onClick={() => setAdding(true)}
-          className="rounded-md bg-cobalt px-4 py-2 text-sm font-medium text-white hover:opacity-90"
-        >
-          + Add application
-        </button>
+        <Button onClick={() => setAdding(true)}>+ Add application</Button>
       </div>
 
       <div className="mt-4">

@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../stores/useAuth'
 import { useAISettings } from '../stores/useAISettings'
+import { Button } from '@/components/ui/button'
 
 const navItems = [
   { to: '/', label: 'Board', Icon: SquareKanban },
@@ -92,12 +93,14 @@ export function Layout() {
         </div>
         <div className="border-t border-ink-soft px-5 py-4">
           <p className="truncate font-mono text-xs text-slate-500">{user?.email}</p>
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={logOut}
-            className="mt-2 text-sm text-slate-400 transition-colors hover:text-white"
+            className="mt-2 -ml-2.5 text-slate-400 hover:bg-ink-soft hover:text-white"
           >
             Sign out
-          </button>
+          </Button>
         </div>
       </aside>
 
