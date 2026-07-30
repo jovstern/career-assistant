@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
-import { Sparkles, Trash2 } from 'lucide-react'
+import { ArrowLeft, Sparkles, Trash2 } from 'lucide-react'
 import { doc, getDoc } from 'firebase/firestore'
 import { Button } from '@/components/ui/button'
 import { db } from '../lib/firebase'
@@ -85,6 +85,13 @@ export function ResumePage() {
 
   return (
     <div className="mx-auto max-w-3xl p-6">
+      <Link
+        to="/resumes"
+        className="mb-3 inline-flex items-center gap-1 text-xs text-slate-500 transition-colors hover:text-cobalt print:hidden"
+      >
+        <ArrowLeft size={13} />
+        Resumes
+      </Link>
       <div className="flex items-center justify-between print:hidden">
         <div>
           <h1 className="font-display text-xl font-bold">
