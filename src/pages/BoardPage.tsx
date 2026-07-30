@@ -60,7 +60,7 @@ export function BoardPage() {
         <p className="mt-10 font-mono text-sm text-slate-400">loading board…</p>
       ) : (
         <DndContext sensors={sensors} onDragEnd={onDragEnd}>
-          <div className="mt-6 flex flex-1 gap-4 overflow-x-auto pb-4">
+          <div className="h-full grid grid-cols-5 gap-2 mt-6 overflow-x-auto">
             {STAGES.map((stage) => (
               <Column
                 key={stage}

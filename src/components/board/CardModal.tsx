@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import * as ToggleGroup from '@radix-ui/react-toggle-group'
 import type { Application, Stage } from '../../types'
 import { STAGES, STAGE_LABELS } from '../../types'
 import { analyzeSkillGap, generateResume } from '../../lib/ai'
 import { SkillGapPanel } from './SkillGapPanel'
 import { InterviewSteps } from './InterviewSteps'
+import { Modal, ModalTitle } from '../ui/Modal'
 
 interface Props {
   application: Application
@@ -59,52 +61,50 @@ export function CardModal({ application, onClose, onUpdate, onDelete }: Props) {
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h2 className="font-display text-lg font-bold">{application.jobTitle}</h2>
-            <p className="text-sm text-slate-500">
-              {application.company}
-              {application.location ? ` · ${application.location}` : ''}
-            </p>
-          </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-ink">
-            ✕
-          </button>
+    <Modal onClose={onClose} className="max-w-lg">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <ModalTitle className="font-display text-lg font-bold">
+            {application.jobTitle}
+          </ModalTitle>
+          <p className="text-sm text-slate-500">
+            {application.company}
+            {application.location ? ` · ${application.location}` : ''}
+          </p>
         </div>
+        <button onClick={onClose} className="text-slate-400 hover:text-ink">
+          ✕
+        </button>
+      </div>
 
-        <div className="mt-4">
-          <label className="font-mono text-[11px] uppercase text-slate-400">Stage</label>
-          <div className="mt-1 flex flex-wrap gap-1.5">
-            {STAGES.map((stage: Stage) => (
-              <button
-                key={stage}
-                onClick={() => onUpdate({ stage })}
-                className={`rounded-full px-3 py-1 text-xs transition-colors ${
-                  application.stage === stage
-                    ? 'text-white'
-                    : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-                }`}
-                style={
-                  application.stage === stage
-                    ? { backgroundColor: `var(--color-stage-${stage})` }
-                    : undefined
-                }
-              >
-                {STAGE_LABELS[stage]}
-              </button>
-            ))}
-          </div>
-        </div>
+      <div className="mt-4">
+        <label className="font-mono text-[11px] uppercase text-slate-400">Stage</label>
+        <ToggleGroup.Root
+          type="single"
+          value={application.stage}
+          onValueChange={(stage) => {
+            if (stage) void onUpdate({ stage: stage as Stage })
+          }}
+          className="mt-1 flex flex-wrap gap-1.5"
+        >
+          {STAGES.map((stage: Stage) => (
+            <ToggleGroup.Item
+              key={stage}
+              value={stage}
+              className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-500 transition-colors hover:bg-slate-200 data-[state=on]:text-white"
+              style={
+                application.stage === stage
+                  ? { backgroundColor: `var(--color-stage-${stage})` }
+                  : undefined
+              }
+            >
+              {STAGE_LABELS[stage]}
+            </ToggleGroup.Item>
+          ))}
+        </ToggleGroup.Root>
+      </div>
 
-        {(application.stage === 'interviewing' || (application.interviewSteps?.length ?? 0) > 0) && (
+      {(application.stage === 'interviewing' || (application.interviewSteps?.length ?? 0) > 0) && (
           <div className="mt-4">
             <label className="font-mono text-[11px] uppercase text-slate-400">
               Interview steps
@@ -194,7 +194,6 @@ export function CardModal({ application, onClose, onUpdate, onDelete }: Props) {
             Delete application
           </button>
         </div>
-      </div>
-    </div>
+    </Modal>
   )
 }

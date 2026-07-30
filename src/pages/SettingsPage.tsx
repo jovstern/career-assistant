@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import * as ToggleGroup from '@radix-ui/react-toggle-group'
 import { ShieldCheck } from 'lucide-react'
 import { useAuth } from '../stores/useAuth'
 import { useAISettings, DEFAULT_MODELS } from '../stores/useAISettings'
@@ -90,22 +91,24 @@ export function SettingsPage() {
       <form onSubmit={submit} className="mt-6 space-y-5">
         <div>
           <label className={labelCls}>AI provider</label>
-          <div className="mt-1 grid grid-cols-3 gap-2">
+          <ToggleGroup.Root
+            type="single"
+            value={provider}
+            onValueChange={(p) => {
+              if (p) setProvider(p as AIProvider)
+            }}
+            className="mt-1 grid grid-cols-3 gap-2"
+          >
             {PROVIDERS.map((p) => (
-              <button
-                type="button"
+              <ToggleGroup.Item
                 key={p.id}
-                onClick={() => setProvider(p.id)}
-                className={`rounded-lg border px-4 py-3 text-sm font-medium transition-colors ${
-                  provider === p.id
-                    ? 'border-cobalt bg-cobalt-soft text-cobalt'
-                    : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
-                }`}
+                value={p.id}
+                className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-600 transition-colors hover:border-slate-300 data-[state=on]:border-cobalt data-[state=on]:bg-cobalt-soft data-[state=on]:text-cobalt"
               >
                 {p.name}
-              </button>
+              </ToggleGroup.Item>
             ))}
-          </div>
+          </ToggleGroup.Root>
         </div>
 
         <div>

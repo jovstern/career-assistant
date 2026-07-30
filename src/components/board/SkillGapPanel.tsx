@@ -1,4 +1,5 @@
 import type { SkillGap } from '../../types'
+import { Checkbox } from '../ui/Checkbox'
 
 const PRIORITY_STYLES: Record<string, string> = {
   high: 'bg-red-50 text-stage-rejected',
@@ -22,12 +23,7 @@ export function SkillGapPanel({ skillGap, onToggle }: Props) {
       <ul className="mt-2 space-y-2">
         {skillGap.items.map((item, i) => (
           <li key={item.skill} className="flex items-start gap-2">
-            <input
-              type="checkbox"
-              checked={item.done}
-              onChange={() => onToggle(i)}
-              className="mt-0.5 accent-cobalt"
-            />
+            <Checkbox checked={item.done} onCheckedChange={() => onToggle(i)} className="mt-0.5" />
             <div className={item.done ? 'opacity-50' : ''}>
               <span className="text-sm font-medium">{item.skill}</span>
               <span

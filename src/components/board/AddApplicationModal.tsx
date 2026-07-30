@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { Application } from '../../types'
 import { importJobFromUrl } from '../../lib/ai'
+import { Modal, ModalTitle } from '../ui/Modal'
 
 interface Props {
   onClose: () => void
@@ -62,16 +63,9 @@ export function AddApplicationModal({ onClose, onAdd }: Props) {
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4"
-      onClick={onClose}
-    >
-      <form
-        onSubmit={submit}
-        onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md space-y-3 rounded-xl bg-white p-6 shadow-xl"
-      >
-        <h2 className="font-display text-lg font-bold">Add application</h2>
+    <Modal onClose={onClose} className="max-w-md">
+      <form onSubmit={submit} className="space-y-3">
+        <ModalTitle className="font-display text-lg font-bold">Add application</ModalTitle>
 
         <div>
           <div className="flex gap-2">
@@ -117,6 +111,6 @@ export function AddApplicationModal({ onClose, onAdd }: Props) {
           </button>
         </div>
       </form>
-    </div>
+    </Modal>
   )
 }

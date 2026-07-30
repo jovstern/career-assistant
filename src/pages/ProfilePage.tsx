@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
+import * as ToggleGroup from '@radix-ui/react-toggle-group'
 import { useAuth } from '../stores/useAuth'
 import { useProfile } from '../stores/useProfile'
 import { parseResumeFile } from '../lib/parseResumeFile'
+import { Select } from '../components/ui/Select'
 import type { UserProfile } from '../types'
 
 const inputCls =
@@ -87,22 +89,24 @@ export function ProfilePage() {
 
         <div>
           <label className={labelCls}>Seniority</label>
-          <div className="mt-1 flex gap-1.5">
+          <ToggleGroup.Root
+            type="single"
+            value={form.seniority}
+            onValueChange={(s) => {
+              if (s) setForm({ ...form, seniority: s as UserProfile['seniority'] })
+            }}
+            className="mt-1 flex gap-1.5"
+          >
             {SENIORITIES.map((s) => (
-              <button
-                type="button"
+              <ToggleGroup.Item
                 key={s}
-                onClick={() => setForm({ ...form, seniority: s })}
-                className={`rounded-full px-3 py-1 text-xs capitalize transition-colors ${
-                  form.seniority === s
-                    ? 'bg-cobalt text-white'
-                    : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-                }`}
+                value={s}
+                className="rounded-full bg-slate-100 px-3 py-1 text-xs capitalize text-slate-500 transition-colors hover:bg-slate-200 data-[state=on]:bg-cobalt data-[state=on]:text-white"
               >
                 {s}
-              </button>
+              </ToggleGroup.Item>
             ))}
-          </div>
+          </ToggleGroup.Root>
         </div>
 
         <div>
@@ -143,25 +147,19 @@ export function ProfilePage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className={labelCls}>Work mode</label>
-                <select
+                <Select
                   value={form.preferences.remote}
-                  onChange={(e) =>
+                  onValueChange={(remote) =>
                     setForm({
                       ...form,
                       preferences: {
                         ...form.preferences,
-                        remote: e.target.value as UserProfile['preferences']['remote'],
+                        remote: remote as UserProfile['preferences']['remote'],
                       },
                     })
                   }
-                  className={inputCls}
-                >
-                  {REMOTE.map((r) => (
-                    <option key={r} value={r}>
-                      {r}
-                    </option>
-                  ))}
-                </select>
+                  options={REMOTE.map((r) => ({ value: r, label: r }))}
+                />
               </div>
               <div>
                 <label className={labelCls}>Min salary (optional)</label>

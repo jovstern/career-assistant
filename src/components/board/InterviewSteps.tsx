@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
+import * as Progress from '@radix-ui/react-progress'
 import { Plus, X } from 'lucide-react'
 import type { InterviewStep } from '../../types'
+import { Checkbox } from '../ui/Checkbox'
 
 const SUGGESTIONS = ['Phone screen', 'Take-home assignment', 'Technical interview', 'On-site', 'HR / offer talk']
 
@@ -48,12 +50,16 @@ export function InterviewSteps({ steps, onChange }: Props) {
     <div className="mt-1 rounded-lg border border-slate-200 p-3">
       {local.length > 0 && (
         <div className="mb-2 flex items-center gap-2">
-          <div className="flex h-1 flex-1 overflow-hidden rounded-full bg-slate-200">
-            <div
-              className="bg-stage-interviewing transition-all"
+          <Progress.Root
+            value={done}
+            max={local.length}
+            className="h-1 flex-1 overflow-hidden rounded-full bg-slate-200"
+          >
+            <Progress.Indicator
+              className="h-full bg-stage-interviewing transition-all"
               style={{ width: `${(done / local.length) * 100}%` }}
             />
-          </div>
+          </Progress.Root>
           <span className="font-mono text-[11px] text-slate-400">
             {done}/{local.length}
           </span>
@@ -63,12 +69,7 @@ export function InterviewSteps({ steps, onChange }: Props) {
       <ul className="space-y-1">
         {local.map((step) => (
           <li key={step.id} className="group flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={step.done}
-              onChange={() => toggle(step.id)}
-              className="accent-cobalt"
-            />
+            <Checkbox checked={step.done} onCheckedChange={() => toggle(step.id)} />
             <input
               value={step.label}
               onChange={(e) => patchLabel(step.id, e.target.value)}

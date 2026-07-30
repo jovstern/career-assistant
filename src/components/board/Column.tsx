@@ -13,7 +13,7 @@ export function Column({ stage, applications, onCardClick }: Props) {
   const { setNodeRef, isOver } = useDroppable({ id: stage })
 
   return (
-    <div className="flex w-64 shrink-0 flex-col">
+    <div className="flex flex-col">
       <div className="mb-2 flex items-baseline justify-between px-1">
         <span className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-slate-500">
           <span
@@ -26,9 +26,12 @@ export function Column({ stage, applications, onCardClick }: Props) {
       </div>
       <div
         ref={setNodeRef}
-        className={`flex min-h-32 flex-1 flex-col gap-2 rounded-lg p-2 transition-colors ${
-          isOver ? 'bg-cobalt-soft' : 'bg-slate-100/70'
-        }`}
+        className="flex min-h-32 flex-1 flex-col gap-2 rounded-lg p-2 transition-colors bg-slate-200/50"
+        style={{
+            backgroundColor: isOver
+              ? `color-mix(in srgb, var(--color-stage-${stage}) 10%, transparent)`
+              : '',
+        }}
       >
         {applications.map((app) => (
           <ApplicationCard key={app.id} application={app} onClick={() => onCardClick(app)} />
