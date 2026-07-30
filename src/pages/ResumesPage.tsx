@@ -1,9 +1,18 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import ReactMarkdown from 'react-markdown'
 import { collection, onSnapshot, orderBy, query } from 'firebase/firestore'
-import { FileText, Sparkles } from 'lucide-react'
+import { Download, FileText, MoreVertical, Sparkles, Trash2 } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { db } from '../lib/firebase'
 import { generateResume } from '../lib/ai'
+import { deleteResume } from '../lib/resumes'
+import { downloadElementAsPdf } from '../lib/downloadPdf'
 import { useAuth } from '../stores/useAuth'
 import { useApplications } from '../stores/useApplications'
 import { useProfile } from '../stores/useProfile'
@@ -27,6 +36,33 @@ export function ResumesPage() {
   const [selectedAppId, setSelectedAppId] = useState('')
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState('')
+  const [pdfResume, setPdfResume] = useState<Resume | null>(null)
+  const pdfRef = useRef<HTMLElement>(null)
+
+  // Render the chosen resume into a hidden article, then capture it as a PDF.
+  useEffect(() => {
+    if (!pdfResume) return
+    const timer = setTimeout(async () => {
+      try {
+        if (pdfRef.current) {
+          const name = `${pdfResume.company} - ${pdfResume.jobTitle} - resume.pdf`.replace(
+            /[/\\:*?"<>|]/g,
+            ''
+          )
+          await downloadElementAsPdf(pdfRef.current, name)
+        }
+      } finally {
+        setPdfResume(null)
+      }
+    }, 60)
+    return () => clearTimeout(timer)
+  }, [pdfResume])
+
+  const removeResume = async (resumeId: string) => {
+    if (!user) return
+    if (!window.confirm('Delete this resume? This cannot be undone.')) return
+    await deleteResume(user.uid, resumeId)
+  }
 
   useEffect(() => {
     if (!user) return
@@ -121,24 +157,64 @@ export function ResumesPage() {
           <p className="text-sm text-slate-400">Nothing yet — build your first tailored resume above.</p>
         ) : (
           resumes.map((r) => (
-            <Link
+            <div
               key={r.id}
-              to={`/resume/${r.id}`}
-              className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-3 transition-shadow hover:shadow-md"
+              className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white p-3 transition-shadow hover:shadow-md"
             >
-              <FileText size={16} className="shrink-0 text-cobalt" />
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium">
-                  {r.jobTitle} · {r.company}
-                </p>
-                <p className="font-mono text-[11px] text-slate-400">
-                  {new Date(r.createdAt).toLocaleString()}
-                </p>
-              </div>
-            </Link>
+              <Link to={`/resume/${r.id}`} className="flex min-w-0 flex-1 items-center gap-3">
+                <FileText size={16} className="shrink-0 text-cobalt" />
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium">
+                    {r.jobTitle} · {r.company}
+                  </p>
+                  <p className="font-mono text-[11px] text-slate-400">
+                    {new Date(r.createdAt).toLocaleString()}
+                  </p>
+                </div>
+              </Link>
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      className="shrink-0 text-slate-400 hover:text-ink"
+                      title="Resume actions"
+                    />
+                  }
+                >
+                  <MoreVertical size={16} />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={() => setPdfResume(r)}
+                    disabled={pdfResume !== null}
+                  >
+                    <Download size={14} />
+                    {pdfResume?.id === r.id ? 'Preparing…' : 'Download PDF'}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => void removeResume(r.id)}
+                    className="text-red-500 data-highlighted:bg-red-50 data-highlighted:text-red-600"
+                  >
+                    <Trash2 size={14} />
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           ))
         )}
       </div>
+
+      {/* Off-screen render target used by the Download PDF menu action */}
+      {pdfResume && (
+        <div aria-hidden className="fixed -left-[10000px] top-0 w-[800px]">
+          <article ref={pdfRef} className="prose-resume bg-white p-10">
+            <ReactMarkdown>{pdfResume.markdown}</ReactMarkdown>
+          </article>
+        </div>
+      )}
     </div>
   )
 }

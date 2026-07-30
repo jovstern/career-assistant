@@ -36,6 +36,15 @@ export async function importJobFromUrl(url: string): Promise<ImportedJob> {
   return res.data
 }
 
+export async function refineResume(resumeId: string, instruction: string): Promise<string> {
+  const fn = httpsCallable<{ resumeId: string; instruction: string }, { markdown: string }>(
+    getFunctions(),
+    'refineResume'
+  )
+  const res = await fn({ resumeId, instruction })
+  return res.data.markdown
+}
+
 export async function analyzeSkillGap(applicationId: string): Promise<void> {
   const fn = httpsCallable<{ applicationId: string }, { summary: string; itemCount: number }>(
     getFunctions(),

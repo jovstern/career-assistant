@@ -99,6 +99,38 @@ export const generateResume = onCall(async (request) => {
   return { resumeId: resumeRef.id }
 })
 
+export const refineResume = onCall(async (request) => {
+  const uid = request.auth?.uid
+  if (!uid) throw new HttpsError('unauthenticated', 'Sign in required')
+  const { resumeId, instruction } = (request.data ?? {}) as { resumeId?: string; instruction?: string }
+  if (!resumeId) throw new HttpsError('invalid-argument', 'resumeId is required')
+  if (!instruction?.trim()) throw new HttpsError('invalid-argument', 'Tell the AI what to change')
+
+  const [resumeSnap, settings] = await Promise.all([
+    db().collection('users').doc(uid).collection('resumes').doc(resumeId).get(),
+    loadAISettings(uid),
+  ])
+  const resume = resumeSnap.data()
+  if (!resume) throw new HttpsError('not-found', 'Resume not found')
+  if (!settings) {
+    throw new HttpsError('failed-precondition', 'Choose an AI provider and add your API key in Settings')
+  }
+
+  const markdown = await callAI(settings, {
+    maxTokens: 8192,
+    system:
+      'You are an expert resume editor. Revise the resume below according to the user\'s instruction. ' +
+      'Keep everything truthful — never invent employers, roles, dates, or accomplishments. ' +
+      'Apply only the requested change plus whatever small adjustments it strictly requires; leave the rest untouched. ' +
+      'Output ONLY the complete revised resume markdown, no preamble.',
+    user: `Current resume:\n${resume.markdown}\n\nInstruction: ${instruction.trim()}`,
+  })
+
+  await resumeSnap.ref.update({ markdown, updatedAt: Date.now() })
+  logger.info(`refineResume uid=${uid} provider=${settings.provider} resume=${resumeId}`)
+  return { markdown }
+})
+
 interface SkillGapResult {
   summary: string
   items: { skill: string; priority: 'high' | 'medium' | 'low'; suggestion: string }[]

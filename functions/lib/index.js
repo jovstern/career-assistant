@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fetchJobsNow = exports.dailyJobFetch = exports.importJobFromUrl = exports.testAIConnection = exports.analyzeSkillGap = exports.generateResume = void 0;
+exports.fetchJobsNow = exports.dailyJobFetch = exports.importJobFromUrl = exports.testAIConnection = exports.analyzeSkillGap = exports.refineResume = exports.generateResume = void 0;
 const scheduler_1 = require("firebase-functions/v2/scheduler");
 const https_1 = require("firebase-functions/v2/https");
 const logger = __importStar(require("firebase-functions/logger"));
@@ -44,6 +44,7 @@ const jobProvider_1 = require("./jobProvider");
 const db = (0, firestore_1.getFirestore)();
 var ai_1 = require("./ai");
 Object.defineProperty(exports, "generateResume", { enumerable: true, get: function () { return ai_1.generateResume; } });
+Object.defineProperty(exports, "refineResume", { enumerable: true, get: function () { return ai_1.refineResume; } });
 Object.defineProperty(exports, "analyzeSkillGap", { enumerable: true, get: function () { return ai_1.analyzeSkillGap; } });
 Object.defineProperty(exports, "testAIConnection", { enumerable: true, get: function () { return ai_1.testAIConnection; } });
 var importJob_1 = require("./importJob");
