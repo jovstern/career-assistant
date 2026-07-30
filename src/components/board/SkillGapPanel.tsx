@@ -1,5 +1,5 @@
 import type { SkillGap } from '../../types'
-import { Checkbox } from '../ui/Checkbox'
+import { Checkbox } from '@/components/ui/checkbox'
 
 const PRIORITY_STYLES: Record<string, string> = {
   high: 'bg-red-50 text-stage-rejected',

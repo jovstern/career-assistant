@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import * as ToggleGroup from '@radix-ui/react-toggle-group'
 import type { Application, Stage } from '../../types'
 import { STAGES, STAGE_LABELS } from '../../types'
 import { analyzeSkillGap, generateResume } from '../../lib/ai'
 import { SkillGapPanel } from './SkillGapPanel'
 import { InterviewSteps } from './InterviewSteps'
-import { Modal, ModalTitle } from '../ui/Modal'
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 
 interface Props {
   application: Application
@@ -61,37 +61,33 @@ export function CardModal({ application, onClose, onUpdate, onDelete }: Props) {
   }
 
   return (
-    <Modal onClose={onClose} className="max-w-lg">
-      <div className="flex items-start justify-between gap-4">
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="block max-h-[88vh] gap-0 overflow-y-auto bg-white p-6 text-ink sm:max-w-lg">
         <div>
-          <ModalTitle className="font-display text-lg font-bold">
+          <DialogTitle className="font-display text-lg font-bold leading-snug">
             {application.jobTitle}
-          </ModalTitle>
+          </DialogTitle>
           <p className="text-sm text-slate-500">
             {application.company}
             {application.location ? ` · ${application.location}` : ''}
           </p>
         </div>
-        <button onClick={onClose} className="text-slate-400 hover:text-ink">
-          ✕
-        </button>
-      </div>
 
       <div className="mt-4">
         <label className="font-mono text-[11px] uppercase text-slate-400">Stage</label>
-        <ToggleGroup.Root
-          type="single"
-          value={application.stage}
-          onValueChange={(stage) => {
-            if (stage) void onUpdate({ stage: stage as Stage })
+        <ToggleGroup
+          value={[application.stage]}
+          onValueChange={(values) => {
+            const stage = values[0] as Stage | undefined
+            if (stage) void onUpdate({ stage })
           }}
-          className="mt-1 flex flex-wrap gap-1.5"
+          className="mt-1 flex w-full flex-wrap gap-1.5"
         >
           {STAGES.map((stage: Stage) => (
-            <ToggleGroup.Item
+            <ToggleGroupItem
               key={stage}
               value={stage}
-              className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-500 transition-colors hover:bg-slate-200 data-[state=on]:text-white"
+              className="h-auto rounded-full bg-slate-100 px-3 py-1 text-xs font-normal text-slate-500 transition-colors hover:bg-slate-200 data-pressed:text-white"
               style={
                 application.stage === stage
                   ? { backgroundColor: `var(--color-stage-${stage})` }
@@ -99,9 +95,9 @@ export function CardModal({ application, onClose, onUpdate, onDelete }: Props) {
               }
             >
               {STAGE_LABELS[stage]}
-            </ToggleGroup.Item>
+            </ToggleGroupItem>
           ))}
-        </ToggleGroup.Root>
+        </ToggleGroup>
       </div>
 
       {(application.stage === 'interviewing' || (application.interviewSteps?.length ?? 0) > 0) && (
@@ -194,6 +190,7 @@ export function CardModal({ application, onClose, onUpdate, onDelete }: Props) {
             Delete application
           </button>
         </div>
-    </Modal>
+      </DialogContent>
+    </Dialog>
   )
 }

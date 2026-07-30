@@ -7,7 +7,13 @@ import { generateResume } from '../lib/ai'
 import { useAuth } from '../stores/useAuth'
 import { useApplications } from '../stores/useApplications'
 import { useProfile } from '../stores/useProfile'
-import { Select } from '../components/ui/Select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import type { Resume } from '../types'
 
 export function ResumesPage() {
@@ -79,14 +85,20 @@ export function ResumesPage() {
         <label className="font-mono text-[11px] uppercase text-slate-400">Target job</label>
         <div className="mt-2 flex gap-2">
           <Select
-            value={selectedAppId}
-            onValueChange={setSelectedAppId}
-            placeholder="Choose from your board…"
-            options={applications.map((app) => ({
-              value: app.id,
-              label: `${app.jobTitle} · ${app.company}`,
-            }))}
-          />
+            value={selectedAppId || null}
+            onValueChange={(v) => setSelectedAppId((v as string) ?? '')}
+          >
+            <SelectTrigger className="h-auto w-full py-2">
+              <SelectValue placeholder="Choose from your board…" />
+            </SelectTrigger>
+            <SelectContent>
+              {applications.map((app) => (
+                <SelectItem key={app.id} value={app.id}>
+                  {app.jobTitle} · {app.company}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <button
             onClick={build}
             disabled={generating || !selectedAppId}

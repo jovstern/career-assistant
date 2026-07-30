@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import * as Progress from '@radix-ui/react-progress'
 import { Plus, X } from 'lucide-react'
 import type { InterviewStep } from '../../types'
-import { Checkbox } from '../ui/Checkbox'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Progress } from '@/components/ui/progress'
 
 const SUGGESTIONS = ['Phone screen', 'Take-home assignment', 'Technical interview', 'On-site', 'HR / offer talk']
 
@@ -50,16 +50,11 @@ export function InterviewSteps({ steps, onChange }: Props) {
     <div className="mt-1 rounded-lg border border-slate-200 p-3">
       {local.length > 0 && (
         <div className="mb-2 flex items-center gap-2">
-          <Progress.Root
+          <Progress
             value={done}
             max={local.length}
-            className="h-1 flex-1 overflow-hidden rounded-full bg-slate-200"
-          >
-            <Progress.Indicator
-              className="h-full bg-stage-interviewing transition-all"
-              style={{ width: `${(done / local.length) * 100}%` }}
-            />
-          </Progress.Root>
+            className="flex-1 [&_[data-slot=progress-indicator]]:bg-stage-interviewing [&_[data-slot=progress-track]]:bg-slate-200"
+          />
           <span className="font-mono text-[11px] text-slate-400">
             {done}/{local.length}
           </span>

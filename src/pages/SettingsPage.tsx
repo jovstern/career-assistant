@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import * as ToggleGroup from '@radix-ui/react-toggle-group'
 import { ShieldCheck } from 'lucide-react'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { useAuth } from '../stores/useAuth'
 import { useAISettings, DEFAULT_MODELS } from '../stores/useAISettings'
 import type { AIProvider } from '../stores/useAISettings'
@@ -91,24 +91,24 @@ export function SettingsPage() {
       <form onSubmit={submit} className="mt-6 space-y-5">
         <div>
           <label className={labelCls}>AI provider</label>
-          <ToggleGroup.Root
-            type="single"
-            value={provider}
-            onValueChange={(p) => {
-              if (p) setProvider(p as AIProvider)
+          <ToggleGroup
+            value={[provider]}
+            onValueChange={(values) => {
+              const p = values[0] as AIProvider | undefined
+              if (p) setProvider(p)
             }}
-            className="mt-1 grid grid-cols-3 gap-2"
+            className="mt-1 grid w-full grid-cols-3 gap-2"
           >
             {PROVIDERS.map((p) => (
-              <ToggleGroup.Item
+              <ToggleGroupItem
                 key={p.id}
                 value={p.id}
-                className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-600 transition-colors hover:border-slate-300 data-[state=on]:border-cobalt data-[state=on]:bg-cobalt-soft data-[state=on]:text-cobalt"
+                className="h-auto rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-600 transition-colors hover:border-slate-300 data-pressed:border-cobalt data-pressed:bg-cobalt-soft data-pressed:text-cobalt"
               >
                 {p.name}
-              </ToggleGroup.Item>
+              </ToggleGroupItem>
             ))}
-          </ToggleGroup.Root>
+          </ToggleGroup>
         </div>
 
         <div>

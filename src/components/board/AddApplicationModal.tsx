@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { Application } from '../../types'
 import { importJobFromUrl } from '../../lib/ai'
-import { Modal, ModalTitle } from '../ui/Modal'
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 
 interface Props {
   onClose: () => void
@@ -35,6 +35,7 @@ export function AddApplicationModal({ onClose, onAdd }: Props) {
     setImportError('')
     try {
       const job = await importJobFromUrl(form.url.trim())
+      debugger
       setForm((f) => ({
         ...f,
         jobTitle: job.jobTitle || f.jobTitle,
@@ -63,9 +64,10 @@ export function AddApplicationModal({ onClose, onAdd }: Props) {
   }
 
   return (
-    <Modal onClose={onClose} className="max-w-md">
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="block max-h-[88vh] gap-0 overflow-y-auto bg-white p-6 text-ink sm:max-w-md">
       <form onSubmit={submit} className="space-y-3">
-        <ModalTitle className="font-display text-lg font-bold">Add application</ModalTitle>
+        <DialogTitle className="font-display text-lg font-bold">Add application</DialogTitle>
 
         <div>
           <div className="flex gap-2">
@@ -111,6 +113,7 @@ export function AddApplicationModal({ onClose, onAdd }: Props) {
           </button>
         </div>
       </form>
-    </Modal>
+      </DialogContent>
+    </Dialog>
   )
 }

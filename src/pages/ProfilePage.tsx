@@ -1,9 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
-import * as ToggleGroup from '@radix-ui/react-toggle-group'
 import { useAuth } from '../stores/useAuth'
 import { useProfile } from '../stores/useProfile'
 import { parseResumeFile } from '../lib/parseResumeFile'
-import { Select } from '../components/ui/Select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import type { UserProfile } from '../types'
 
 const inputCls =
@@ -89,24 +95,24 @@ export function ProfilePage() {
 
         <div>
           <label className={labelCls}>Seniority</label>
-          <ToggleGroup.Root
-            type="single"
-            value={form.seniority}
-            onValueChange={(s) => {
-              if (s) setForm({ ...form, seniority: s as UserProfile['seniority'] })
+          <ToggleGroup
+            value={[form.seniority]}
+            onValueChange={(values) => {
+              const s = values[0] as UserProfile['seniority'] | undefined
+              if (s) setForm({ ...form, seniority: s })
             }}
-            className="mt-1 flex gap-1.5"
+            className="mt-1 flex w-full gap-1.5"
           >
             {SENIORITIES.map((s) => (
-              <ToggleGroup.Item
+              <ToggleGroupItem
                 key={s}
                 value={s}
-                className="rounded-full bg-slate-100 px-3 py-1 text-xs capitalize text-slate-500 transition-colors hover:bg-slate-200 data-[state=on]:bg-cobalt data-[state=on]:text-white"
+                className="h-auto rounded-full bg-slate-100 px-3 py-1 text-xs font-normal capitalize text-slate-500 transition-colors hover:bg-slate-200 data-pressed:bg-cobalt data-pressed:text-white"
               >
                 {s}
-              </ToggleGroup.Item>
+              </ToggleGroupItem>
             ))}
-          </ToggleGroup.Root>
+          </ToggleGroup>
         </div>
 
         <div>
@@ -158,8 +164,18 @@ export function ProfilePage() {
                       },
                     })
                   }
-                  options={REMOTE.map((r) => ({ value: r, label: r }))}
-                />
+                >
+                  <SelectTrigger className="h-auto w-full py-2">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {REMOTE.map((r) => (
+                      <SelectItem key={r} value={r}>
+                        {r}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <label className={labelCls}>Min salary (optional)</label>
