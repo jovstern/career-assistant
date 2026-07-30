@@ -9,7 +9,7 @@ import {
   UserRound,
 } from 'lucide-react'
 import { useAuth } from '../stores/useAuth'
-import { useAISettings } from '../stores/useAISettings'
+import { useAIProvider } from '../stores/useAIProvider'
 import { Button } from '@/components/ui/button'
 
 const navItems = [
@@ -20,8 +20,8 @@ const navItems = [
 ]
 
 function AIStatus() {
-  const { settings, loaded } = useAISettings()
-  const connected = loaded && settings.hasKey
+  const { config, loaded } = useAIProvider()
+  const connected = loaded && config.hasKey
   return (
     <NavLink
       to="/settings"
@@ -34,7 +34,7 @@ function AIStatus() {
       ) : connected ? (
         <span className="text-slate-300">
           AI connected
-          <span className="ml-1.5 font-mono text-[10px] text-stage-offer">● {settings.provider}</span>
+          <span className="ml-1.5 font-mono text-[10px] text-stage-offer">● {config.provider}</span>
         </span>
       ) : (
         <span className="text-amber-400">AI not connected — set up</span>
@@ -45,7 +45,7 @@ function AIStatus() {
 
 export function Layout() {
   const { user, logOut } = useAuth()
-  const subscribe = useAISettings((s) => s.subscribe)
+  const subscribe = useAIProvider((s) => s.subscribe)
 
   useEffect(() => {
     if (user) return subscribe(user.uid)

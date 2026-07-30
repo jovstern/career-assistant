@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import { Button } from '@/components/ui/button'
+import { downloadElementAsPdf } from '../lib/downloadPdf'
 import { doc, getDoc } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import { useAuth } from '../stores/useAuth'
@@ -12,6 +13,19 @@ export function ResumePage() {
   const user = useAuth((s) => s.user)
   const [resume, setResume] = useState<Resume | null>(null)
   const [error, setError] = useState('')
+  const [exporting, setExporting] = useState(false)
+  const articleRef = useRef<HTMLElement>(null)
+
+  const exportPdf = async () => {
+    if (!articleRef.current || !resume) return
+    setExporting(true)
+    try {
+      const name = `${resume.company} - ${resume.jobTitle} - resume.pdf`.replace(/[/\\:*?"<>|]/g, '')
+      await downloadElementAsPdf(articleRef.current, name)
+    } finally {
+      setExporting(false)
+    }
+  }
 
   useEffect(() => {
     if (!user || !id) return
@@ -46,8 +60,8 @@ export function ResumePage() {
           >
             Copy markdown
           </Button>
-          <Button size="sm" onClick={() => window.print()} className="text-xs">
-            Export PDF
+          <Button size="sm" onClick={exportPdf} disabled={exporting} className="text-xs">
+            {exporting ? 'Exporting…' : 'Export PDF'}
           </Button>
           <Button variant="ghost" size="sm" className="text-xs text-slate-500" render={<Link to="/" />}>
             Back to board
@@ -55,7 +69,10 @@ export function ResumePage() {
         </div>
       </div>
 
-      <article className="prose-resume mt-6 rounded-xl border border-slate-200 bg-white p-10 shadow-sm print:mt-0 print:border-0 print:p-0 print:shadow-none">
+      <article
+        ref={articleRef}
+        className="prose-resume mt-6 rounded-xl border border-slate-200 bg-white p-10 shadow-sm print:mt-0 print:border-0 print:p-0 print:shadow-none"
+      >
         <ReactMarkdown>{resume.markdown}</ReactMarkdown>
       </article>
     </div>
