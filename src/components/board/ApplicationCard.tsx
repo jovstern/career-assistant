@@ -25,6 +25,15 @@ export function ApplicationCard({ application, onClick }: Props) {
     >
       <p className="text-sm font-medium leading-snug">{application.jobTitle}</p>
       <p className="mt-1 text-xs text-slate-500">{application.company}</p>
+      {(application.interviewSteps?.length ?? 0) > 0 && (
+        <span
+          className="mt-2 inline-block rounded-full px-2 py-0.5 font-mono text-[10px]"
+          style={{ backgroundColor: '#f3e8ff', color: 'var(--color-stage-interviewing)' }}
+        >
+          steps {application.interviewSteps!.filter((s) => s.done).length}/
+          {application.interviewSteps!.length}
+        </span>
+      )}
       <div className="mt-2 flex items-center justify-between">
         {application.location && (
           <span className="truncate text-[11px] text-slate-400">{application.location}</span>

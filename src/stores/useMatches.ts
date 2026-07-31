@@ -8,8 +8,8 @@ import {
   updateDoc,
   where,
 } from 'firebase/firestore'
-import { getFunctions, httpsCallable } from 'firebase/functions'
-import { db } from '../lib/firebase'
+import { httpsCallable } from 'firebase/functions'
+import { db, fns } from '../lib/firebase'
 import { useApplications } from './useApplications'
 
 export interface JobMatch {
@@ -66,7 +66,7 @@ export const useMatches = create<MatchesState>((set) => ({
     set({ fetching: true })
     try {
       const fn = httpsCallable<void, { found: number; newMatches: number }>(
-        getFunctions(),
+        fns,
         'fetchJobsNow'
       )
       const res = await fn()

@@ -1,6 +1,21 @@
 import { useState } from 'react'
 import type { Application } from '../../types'
 import { importJobFromUrl } from '../../lib/ai'
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+
+const WORK_MODES = [
+  { value: 'onsite', label: 'On site' },
+  { value: 'hybrid', label: 'Hybrid' },
+  { value: 'remote', label: 'Remote' },
+] as const
 
 interface Props {
   onClose: () => void
@@ -17,6 +32,9 @@ export function AddApplicationModal({ onClose, onAdd }: Props) {
     location: '',
     url: '',
     description: '',
+    contactEmail: '',
+    contactPhone: '',
+    workMode: '' as '' | 'onsite' | 'hybrid' | 'remote',
   })
   const [busy, setBusy] = useState(false)
   const [importing, setImporting] = useState(false)
@@ -54,7 +72,14 @@ export function AddApplicationModal({ onClose, onAdd }: Props) {
     e.preventDefault()
     setBusy(true)
     try {
-      await onAdd({ ...form, stage: 'saved', notes: '', source: 'manual' })
+      const { workMode, ...rest } = form
+      await onAdd({
+        ...rest,
+        workMode: workMode || undefined,
+        stage: 'saved',
+        notes: '',
+        source: 'manual',
+      })
       onClose()
     } finally {
       setBusy(false)
@@ -62,16 +87,10 @@ export function AddApplicationModal({ onClose, onAdd }: Props) {
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4"
-      onClick={onClose}
-    >
-      <form
-        onSubmit={submit}
-        onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md space-y-3 rounded-xl bg-white p-6 shadow-xl"
-      >
-        <h2 className="font-display text-lg font-bold">Add application</h2>
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="block max-h-[88vh] gap-0 overflow-y-auto bg-white p-6 text-ink sm:max-w-md">
+      <form onSubmit={submit} className="space-y-3">
+        <DialogTitle className="font-display text-lg font-bold">Add application</DialogTitle>
 
         <div>
           <div className="flex gap-2">
@@ -82,21 +101,55 @@ export function AddApplicationModal({ onClose, onAdd }: Props) {
               onChange={set('url')}
               className={inputCls}
             />
-            <button
+            <Button
               type="button"
+              variant="outline"
               onClick={autoFill}
               disabled={importing}
-              className="shrink-0 rounded-md border border-cobalt px-3 py-2 text-xs font-medium text-cobalt hover:bg-cobalt-soft disabled:opacity-50"
+              className="h-auto shrink-0 border-cobalt text-xs text-cobalt hover:bg-cobalt-soft hover:text-cobalt"
             >
               {importing ? 'Importing…' : 'Auto-fill'}
-            </button>
+            </Button>
           </div>
           {importError && <p className="mt-1 text-xs text-red-500">{importError}</p>}
         </div>
 
-        <input required placeholder="Job title" value={form.jobTitle} onChange={set('jobTitle')} className={inputCls} />
         <input required placeholder="Company" value={form.company} onChange={set('company')} className={inputCls} />
-        <input placeholder="Location (optional)" value={form.location} onChange={set('location')} className={inputCls} />
+        <input required placeholder="Job title" value={form.jobTitle} onChange={set('jobTitle')} className={inputCls} />
+        <div className="flex gap-2">
+          <input placeholder="Location (optional)" value={form.location} onChange={set('location')} className={inputCls} />
+          <Select
+            value={form.workMode || null}
+            onValueChange={(v) => setForm((f) => ({ ...f, workMode: v as typeof f.workMode }))}
+          >
+            <SelectTrigger className="h-auto w-40 shrink-0 py-2">
+              <SelectValue placeholder="Work mode" />
+            </SelectTrigger>
+            <SelectContent>
+              {WORK_MODES.map((m) => (
+                <SelectItem key={m.value} value={m.value}>
+                  {m.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex gap-2">
+          <input
+            type="email"
+            placeholder="Contact email (optional)"
+            value={form.contactEmail}
+            onChange={set('contactEmail')}
+            className={inputCls}
+          />
+          <input
+            type="tel"
+            placeholder="Contact phone (optional)"
+            value={form.contactPhone}
+            onChange={set('contactPhone')}
+            className={inputCls}
+          />
+        </div>
         <textarea
           placeholder="About the job - used later for resume tailoring"
           value={form.description}
@@ -105,18 +158,15 @@ export function AddApplicationModal({ onClose, onAdd }: Props) {
           className={inputCls}
         />
         <div className="flex justify-end gap-2 pt-1">
-          <button type="button" onClick={onClose} className="rounded-md px-4 py-2 text-sm text-slate-500 hover:bg-slate-100">
+          <Button type="button" variant="ghost" onClick={onClose} className="text-slate-500">
             Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={busy}
-            className="rounded-md bg-cobalt px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
-          >
+          </Button>
+          <Button type="submit" disabled={busy}>
             Add to board
-          </button>
+          </Button>
         </div>
       </form>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }

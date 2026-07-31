@@ -2,6 +2,15 @@ import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '../stores/useAuth'
 import { useProfile } from '../stores/useProfile'
 import { parseResumeFile } from '../lib/parseResumeFile'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { Button } from '@/components/ui/button'
 import type { UserProfile } from '../types'
 
 const inputCls =
@@ -87,22 +96,24 @@ export function ProfilePage() {
 
         <div>
           <label className={labelCls}>Seniority</label>
-          <div className="mt-1 flex gap-1.5">
+          <ToggleGroup
+            value={[form.seniority]}
+            onValueChange={(values) => {
+              const s = values[0] as UserProfile['seniority'] | undefined
+              if (s) setForm({ ...form, seniority: s })
+            }}
+            className="mt-1 flex w-full gap-1.5"
+          >
             {SENIORITIES.map((s) => (
-              <button
-                type="button"
+              <ToggleGroupItem
                 key={s}
-                onClick={() => setForm({ ...form, seniority: s })}
-                className={`rounded-full px-3 py-1 text-xs capitalize transition-colors ${
-                  form.seniority === s
-                    ? 'bg-cobalt text-white'
-                    : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-                }`}
+                value={s}
+                className="h-auto rounded-full bg-slate-100 px-3 py-1 text-xs font-normal capitalize text-slate-500 transition-colors hover:bg-slate-200 data-pressed:bg-cobalt data-pressed:text-white"
               >
                 {s}
-              </button>
+              </ToggleGroupItem>
             ))}
-          </div>
+          </ToggleGroup>
         </div>
 
         <div>
@@ -143,25 +154,29 @@ export function ProfilePage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className={labelCls}>Work mode</label>
-                <select
+                <Select
                   value={form.preferences.remote}
-                  onChange={(e) =>
+                  onValueChange={(remote) =>
                     setForm({
                       ...form,
                       preferences: {
                         ...form.preferences,
-                        remote: e.target.value as UserProfile['preferences']['remote'],
+                        remote: remote as UserProfile['preferences']['remote'],
                       },
                     })
                   }
-                  className={inputCls}
                 >
-                  {REMOTE.map((r) => (
-                    <option key={r} value={r}>
-                      {r}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger className="h-auto w-full py-2">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {REMOTE.map((r) => (
+                      <SelectItem key={r} value={r}>
+                        {r}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <label className={labelCls}>Min salary (optional)</label>
@@ -191,14 +206,16 @@ export function ProfilePage() {
             your board to produce tailored versions.
           </p>
           <div className="mt-3 flex items-center gap-3">
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
               onClick={() => fileRef.current?.click()}
               disabled={parsing}
-              className="rounded-md border border-cobalt px-3 py-1.5 text-xs font-medium text-cobalt hover:bg-cobalt-soft disabled:opacity-50"
+              className="border-cobalt text-xs text-cobalt hover:bg-cobalt-soft hover:text-cobalt"
             >
               {parsing ? 'Reading…' : 'Upload file (PDF / TXT / MD)'}
-            </button>
+            </Button>
             <input
               ref={fileRef}
               type="file"
@@ -223,12 +240,7 @@ export function ProfilePage() {
         </fieldset>
 
         <div className="flex items-center gap-3">
-          <button
-            type="submit"
-            className="rounded-md bg-cobalt px-4 py-2 text-sm font-medium text-white hover:opacity-90"
-          >
-            Save profile
-          </button>
+          <Button type="submit">Save profile</Button>
           {saved && <span className="font-mono text-xs text-stage-offer">saved ✓</span>}
         </div>
       </form>

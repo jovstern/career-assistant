@@ -1,8 +1,9 @@
-import { getFunctions, httpsCallable } from 'firebase/functions'
+import { httpsCallable } from 'firebase/functions'
+import { fns } from './firebase'
 
 export async function generateResume(applicationId: string): Promise<string> {
   const fn = httpsCallable<{ applicationId: string }, { resumeId: string }>(
-    getFunctions(),
+    fns,
     'generateResume'
   )
   const res = await fn({ applicationId })
@@ -11,11 +12,12 @@ export async function generateResume(applicationId: string): Promise<string> {
 
 export async function testAIConnection(input: {
   provider: string
-  apiKey: string
+  /** Omit to test the key already saved server-side. */
+  apiKey?: string
   model?: string
 }): Promise<{ ok: boolean; reply: string }> {
   const fn = httpsCallable<typeof input, { ok: boolean; reply: string }>(
-    getFunctions(),
+    fns,
     'testAIConnection'
   )
   const res = await fn(input)
@@ -30,14 +32,23 @@ export interface ImportedJob {
 }
 
 export async function importJobFromUrl(url: string): Promise<ImportedJob> {
-  const fn = httpsCallable<{ url: string }, ImportedJob>(getFunctions(), 'importJobFromUrl')
+  const fn = httpsCallable<{ url: string }, ImportedJob>(fns, 'importJobFromUrl')
   const res = await fn({ url })
   return res.data
 }
 
+export async function refineResume(resumeId: string, instruction: string): Promise<string> {
+  const fn = httpsCallable<{ resumeId: string; instruction: string }, { markdown: string }>(
+    fns,
+    'refineResume'
+  )
+  const res = await fn({ resumeId, instruction })
+  return res.data.markdown
+}
+
 export async function analyzeSkillGap(applicationId: string): Promise<void> {
   const fn = httpsCallable<{ applicationId: string }, { summary: string; itemCount: number }>(
-    getFunctions(),
+    fns,
     'analyzeSkillGap'
   )
   await fn({ applicationId })

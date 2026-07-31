@@ -1,0 +1,137 @@
+import { useEffect, useState } from 'react'
+import { Plus, X } from 'lucide-react'
+import type { InterviewStep } from '../../types'
+import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Progress } from '@/components/ui/progress'
+
+const SUGGESTIONS = ['Phone screen', 'Take-home assignment', 'Technical interview', 'On-site', 'HR / offer talk']
+
+interface Props {
+  steps: InterviewStep[]
+  onChange: (steps: InterviewStep[]) => void
+}
+
+export function InterviewSteps({ steps, onChange }: Props) {
+  const [newLabel, setNewLabel] = useState('')
+  // Labels are edited locally and committed on blur — one Firestore write per
+  // edit instead of one per keystroke. Checkbox/add/delete commit immediately.
+  const [local, setLocal] = useState(steps)
+
+  useEffect(() => setLocal(steps), [steps])
+
+  const commit = (next: InterviewStep[]) => {
+    setLocal(next)
+    onChange(next)
+  }
+
+  const add = (label: string) => {
+    const trimmed = label.trim()
+    if (!trimmed) return
+    commit([...local, { id: crypto.randomUUID(), label: trimmed, done: false }])
+    setNewLabel('')
+  }
+
+  const patchLabel = (id: string, label: string) =>
+    setLocal(local.map((s) => (s.id === id ? { ...s, label } : s)))
+
+  const toggle = (id: string) =>
+    commit(local.map((s) => (s.id === id ? { ...s, done: !s.done } : s)))
+
+  const remove = (id: string) => commit(local.filter((s) => s.id !== id))
+
+  const commitLabels = () => {
+    const cleaned = local.filter((s) => s.label.trim())
+    if (JSON.stringify(cleaned) !== JSON.stringify(steps)) onChange(cleaned)
+  }
+
+  const done = local.filter((s) => s.done).length
+
+  return (
+    <div className="mt-1 rounded-lg border border-slate-200 p-3">
+      {local.length > 0 && (
+        <div className="mb-2 flex items-center gap-2">
+          <Progress
+            value={done}
+            max={local.length}
+            className="flex-1 [&_[data-slot=progress-indicator]]:bg-stage-interviewing [&_[data-slot=progress-track]]:bg-slate-200"
+          />
+          <span className="font-mono text-[11px] text-slate-400">
+            {done}/{local.length}
+          </span>
+        </div>
+      )}
+
+      <ul className="space-y-1">
+        {local.map((step) => (
+          <li key={step.id} className="group flex items-center gap-2">
+            <Checkbox checked={step.done} onCheckedChange={() => toggle(step.id)} />
+            <input
+              value={step.label}
+              onChange={(e) => patchLabel(step.id, e.target.value)}
+              onBlur={commitLabels}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+              }}
+              className={`w-full rounded border border-transparent bg-transparent px-1 py-0.5 text-sm focus:border-cobalt focus:bg-white focus:outline-none ${
+                step.done ? 'text-slate-400 line-through' : ''
+              }`}
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              onClick={() => remove(step.id)}
+              className="text-slate-300 opacity-0 transition-opacity hover:text-red-500 group-hover:opacity-100"
+              title="Remove step"
+            >
+              <X size={14} />
+            </Button>
+          </li>
+        ))}
+      </ul>
+
+      <div className="mt-2 flex items-center gap-2">
+        <input
+          value={newLabel}
+          onChange={(e) => setNewLabel(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault()
+              add(newLabel)
+            }
+          }}
+          placeholder="Add a step… e.g. Phone screen"
+          className="w-full rounded-md border border-slate-200 px-2 py-1.5 text-sm focus:border-cobalt focus:outline-none"
+        />
+        <Button
+          type="button"
+          variant="outline"
+          size="icon-sm"
+          onClick={() => add(newLabel)}
+          className="shrink-0 border-cobalt text-cobalt hover:bg-cobalt-soft hover:text-cobalt"
+          title="Add step"
+        >
+          <Plus size={14} />
+        </Button>
+      </div>
+
+      {local.length === 0 && (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {SUGGESTIONS.map((s) => (
+            <Button
+              key={s}
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => add(s)}
+              className="h-auto rounded-full bg-slate-100 px-2.5 py-1 text-xs font-normal text-slate-500 hover:bg-cobalt-soft hover:text-cobalt"
+            >
+              + {s}
+            </Button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}

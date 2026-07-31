@@ -9,7 +9,7 @@ import type { JobSearchCriteria } from './jobProvider'
 initializeApp()
 const db = getFirestore()
 
-export { generateResume, analyzeSkillGap, testAIConnection } from './ai'
+export { generateResume, refineResume, analyzeSkillGap, testAIConnection } from './ai'
 export { importJobFromUrl } from './importJob'
 const provider = new MockJobProvider()
 

@@ -9,7 +9,8 @@ import {
   UserRound,
 } from 'lucide-react'
 import { useAuth } from '../stores/useAuth'
-import { useAISettings } from '../stores/useAISettings'
+import { useAIProvider } from '../stores/useAIProvider'
+import { Button } from '@/components/ui/button'
 
 const navItems = [
   { to: '/', label: 'Board', Icon: SquareKanban },
@@ -19,8 +20,8 @@ const navItems = [
 ]
 
 function AIStatus() {
-  const { settings, loaded } = useAISettings()
-  const connected = loaded && !!settings.apiKey
+  const { config, loaded } = useAIProvider()
+  const connected = loaded && config.hasKey
   return (
     <NavLink
       to="/settings"
@@ -33,7 +34,7 @@ function AIStatus() {
       ) : connected ? (
         <span className="text-slate-300">
           AI connected
-          <span className="ml-1.5 font-mono text-[10px] text-stage-offer">● {settings.provider}</span>
+          <span className="ml-1.5 font-mono text-[10px] text-stage-offer">● {config.provider}</span>
         </span>
       ) : (
         <span className="text-amber-400">AI not connected — set up</span>
@@ -44,7 +45,7 @@ function AIStatus() {
 
 export function Layout() {
   const { user, logOut } = useAuth()
-  const subscribe = useAISettings((s) => s.subscribe)
+  const subscribe = useAIProvider((s) => s.subscribe)
 
   useEffect(() => {
     if (user) return subscribe(user.uid)
@@ -92,12 +93,14 @@ export function Layout() {
         </div>
         <div className="border-t border-ink-soft px-5 py-4">
           <p className="truncate font-mono text-xs text-slate-500">{user?.email}</p>
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={logOut}
-            className="mt-2 text-sm text-slate-400 transition-colors hover:text-white"
+            className="mt-2 -ml-2.5 text-slate-400 hover:bg-ink-soft hover:text-white"
           >
             Sign out
-          </button>
+          </Button>
         </div>
       </aside>
 

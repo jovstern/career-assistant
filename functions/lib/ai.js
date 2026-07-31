@@ -33,26 +33,25 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.analyzeSkillGap = exports.generateResume = exports.testAIConnection = void 0;
+exports.analyzeSkillGap = exports.refineResume = exports.generateResume = exports.testAIConnection = void 0;
 const https_1 = require("firebase-functions/v2/https");
 const logger = __importStar(require("firebase-functions/logger"));
 const firestore_1 = require("firebase-admin/firestore");
 const providers_1 = require("./providers");
 const db = () => (0, firestore_1.getFirestore)();
 async function loadContext(uid, applicationId) {
-    const [profileSnap, appSnap, settingsSnap] = await Promise.all([
+    const [profileSnap, appSnap, settings] = await Promise.all([
         db().collection('users').doc(uid).get(),
         db().collection('users').doc(uid).collection('applications').doc(applicationId).get(),
-        db().collection('users').doc(uid).collection('settings').doc('ai').get(),
+        (0, providers_1.loadAISettings)(uid),
     ]);
     const profile = profileSnap.data();
     const application = appSnap.data();
-    const settings = settingsSnap.data();
     if (!profile)
         throw new https_1.HttpsError('failed-precondition', 'Fill in your profile first');
     if (!application)
         throw new https_1.HttpsError('not-found', 'Application not found');
-    if (!settings?.apiKey || !settings.provider) {
+    if (!settings) {
         throw new https_1.HttpsError('failed-precondition', 'Choose an AI provider and add your API key in Settings');
     }
     return { profile, application, settings };
@@ -62,10 +61,20 @@ exports.testAIConnection = (0, https_1.onCall)(async (request) => {
     if (!uid)
         throw new https_1.HttpsError('unauthenticated', 'Sign in required');
     const { provider, apiKey, model } = (request.data ?? {});
-    if (!provider || !apiKey?.trim()) {
-        throw new https_1.HttpsError('invalid-argument', 'Provider and API key are required');
+    if (!provider)
+        throw new https_1.HttpsError('invalid-argument', 'Provider is required');
+    // Test either the key typed in the form, or (if none) the stored key.
+    let settings;
+    if (apiKey?.trim()) {
+        settings = { provider, apiKey: apiKey.trim(), model };
     }
-    const text = await (0, providers_1.callAI)({ provider, apiKey: apiKey.trim(), model }, {
+    else {
+        const stored = await (0, providers_1.loadAISettings)(uid);
+        if (!stored)
+            throw new https_1.HttpsError('invalid-argument', 'Enter an API key first');
+        settings = { ...stored, provider, model: model ?? stored.model };
+    }
+    const text = await (0, providers_1.callAI)(settings, {
         maxTokens: 1000,
         system: 'You are a connectivity test. Reply with the single word: OK',
         user: 'ping',
@@ -111,6 +120,37 @@ exports.generateResume = (0, https_1.onCall)(async (request) => {
         .update({ resumeId: resumeRef.id, updatedAt: now });
     logger.info(`generateResume uid=${uid} provider=${settings.provider} app=${applicationId} resume=${resumeRef.id}`);
     return { resumeId: resumeRef.id };
+});
+exports.refineResume = (0, https_1.onCall)(async (request) => {
+    const uid = request.auth?.uid;
+    if (!uid)
+        throw new https_1.HttpsError('unauthenticated', 'Sign in required');
+    const { resumeId, instruction } = (request.data ?? {});
+    if (!resumeId)
+        throw new https_1.HttpsError('invalid-argument', 'resumeId is required');
+    if (!instruction?.trim())
+        throw new https_1.HttpsError('invalid-argument', 'Tell the AI what to change');
+    const [resumeSnap, settings] = await Promise.all([
+        db().collection('users').doc(uid).collection('resumes').doc(resumeId).get(),
+        (0, providers_1.loadAISettings)(uid),
+    ]);
+    const resume = resumeSnap.data();
+    if (!resume)
+        throw new https_1.HttpsError('not-found', 'Resume not found');
+    if (!settings) {
+        throw new https_1.HttpsError('failed-precondition', 'Choose an AI provider and add your API key in Settings');
+    }
+    const markdown = await (0, providers_1.callAI)(settings, {
+        maxTokens: 8192,
+        system: 'You are an expert resume editor. Revise the resume below according to the user\'s instruction. ' +
+            'Keep everything truthful — never invent employers, roles, dates, or accomplishments. ' +
+            'Apply only the requested change plus whatever small adjustments it strictly requires; leave the rest untouched. ' +
+            'Output ONLY the complete revised resume markdown, no preamble.',
+        user: `Current resume:\n${resume.markdown}\n\nInstruction: ${instruction.trim()}`,
+    });
+    await resumeSnap.ref.update({ markdown, updatedAt: Date.now() });
+    logger.info(`refineResume uid=${uid} provider=${settings.provider} resume=${resumeId}`);
+    return { markdown };
 });
 exports.analyzeSkillGap = (0, https_1.onCall)(async (request) => {
     const uid = request.auth?.uid;
