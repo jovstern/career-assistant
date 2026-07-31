@@ -139,7 +139,7 @@ export function AIProviderSection() {
             type="password"
             value={apiKeyInput}
             placeholder={
-              hasSavedKey ? '••••••••••••  key saved — type to replace' : providerInfo.keyHint
+              hasSavedKey ? '••••••••••••  key saved' : providerInfo.keyHint
             }
             onChange={(e) => setKeys((k) => ({ ...k, [provider]: e.target.value }))}
             className={inputCls}
