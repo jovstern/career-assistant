@@ -87,6 +87,9 @@ export function CardModal({ application, onClose, onUpdate, onDelete }: Props) {
           <p className="text-sm text-slate-500">
             {application.company}
             {application.location ? ` · ${application.location}` : ''}
+            {application.workMode
+              ? ` · ${application.workMode === 'onsite' ? 'on site' : application.workMode}`
+              : ''}
           </p>
         </div>
 

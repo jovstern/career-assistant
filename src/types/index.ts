@@ -48,6 +48,7 @@ export interface Application {
   company: string
   jobTitle: string
   location?: string
+  workMode?: 'onsite' | 'hybrid' | 'remote'
   url?: string
   description?: string
   stage: Stage

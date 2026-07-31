@@ -3,6 +3,19 @@ import type { Application } from '../../types'
 import { importJobFromUrl } from '../../lib/ai'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+
+const WORK_MODES = [
+  { value: 'onsite', label: 'On site' },
+  { value: 'hybrid', label: 'Hybrid' },
+  { value: 'remote', label: 'Remote' },
+] as const
 
 interface Props {
   onClose: () => void
@@ -21,6 +34,7 @@ export function AddApplicationModal({ onClose, onAdd }: Props) {
     description: '',
     contactEmail: '',
     contactPhone: '',
+    workMode: '' as '' | 'onsite' | 'hybrid' | 'remote',
   })
   const [busy, setBusy] = useState(false)
   const [importing, setImporting] = useState(false)
@@ -58,7 +72,14 @@ export function AddApplicationModal({ onClose, onAdd }: Props) {
     e.preventDefault()
     setBusy(true)
     try {
-      await onAdd({ ...form, stage: 'saved', notes: '', source: 'manual' })
+      const { workMode, ...rest } = form
+      await onAdd({
+        ...rest,
+        workMode: workMode || undefined,
+        stage: 'saved',
+        notes: '',
+        source: 'manual',
+      })
       onClose()
     } finally {
       setBusy(false)
@@ -70,6 +91,8 @@ export function AddApplicationModal({ onClose, onAdd }: Props) {
       <DialogContent className="block max-h-[88vh] gap-0 overflow-y-auto bg-white p-6 text-ink sm:max-w-md">
       <form onSubmit={submit} className="space-y-3">
         <DialogTitle className="font-display text-lg font-bold">Add application</DialogTitle>
+
+        <input required placeholder="Company" value={form.company} onChange={set('company')} className={inputCls} />
 
         <div>
           <div className="flex gap-2">
@@ -93,9 +116,25 @@ export function AddApplicationModal({ onClose, onAdd }: Props) {
           {importError && <p className="mt-1 text-xs text-red-500">{importError}</p>}
         </div>
 
-        <input required placeholder="Company" value={form.company} onChange={set('company')} className={inputCls} />
         <input required placeholder="Job title" value={form.jobTitle} onChange={set('jobTitle')} className={inputCls} />
-        <input placeholder="Location (optional)" value={form.location} onChange={set('location')} className={inputCls} />
+        <div className="flex gap-2">
+          <input placeholder="Location (optional)" value={form.location} onChange={set('location')} className={inputCls} />
+          <Select
+            value={form.workMode || null}
+            onValueChange={(v) => setForm((f) => ({ ...f, workMode: v as typeof f.workMode }))}
+          >
+            <SelectTrigger className="h-auto w-40 shrink-0 py-2">
+              <SelectValue placeholder="Work mode" />
+            </SelectTrigger>
+            <SelectContent>
+              {WORK_MODES.map((m) => (
+                <SelectItem key={m.value} value={m.value}>
+                  {m.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <div className="flex gap-2">
           <input
             type="email"
