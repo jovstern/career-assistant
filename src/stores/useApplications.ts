@@ -23,7 +23,13 @@ interface ApplicationsState {
     data: Partial<
       Pick<
         Application,
-        'stage' | 'notes' | 'skillGap' | 'interviewSteps' | 'contactEmail' | 'contactPhone'
+        | 'stage'
+        | 'notes'
+        | 'skillGap'
+        | 'interviewSteps'
+        | 'contactEmail'
+        | 'contactPhone'
+        | 'workMode'
       >
     >
   ) => Promise<void>

@@ -8,6 +8,14 @@ import { InterviewSteps } from './InterviewSteps'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Button } from '@/components/ui/button'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 interface Props {
   application: Application
@@ -16,7 +24,13 @@ interface Props {
     data: Partial<
       Pick<
         Application,
-        'stage' | 'notes' | 'skillGap' | 'interviewSteps' | 'contactEmail' | 'contactPhone'
+        | 'stage'
+        | 'notes'
+        | 'skillGap'
+        | 'interviewSteps'
+        | 'contactEmail'
+        | 'contactPhone'
+        | 'workMode'
       >
     >
   ) => Promise<void>
@@ -149,11 +163,30 @@ export function CardModal({ application, onClose, onUpdate, onDelete }: Props) {
         {application.description && (
           <div className="mt-4">
             <label className="font-mono text-[11px] uppercase text-slate-400">Description</label>
-            <p className="mt-1 max-h-32 overflow-auto whitespace-pre-wrap text-sm text-slate-600">
-              {application.description}
-            </p>
+            <ScrollArea className="mt-1 h-32 rounded-md border border-slate-100 pr-3">
+              <p className="whitespace-pre-wrap p-2 text-sm text-slate-600">
+                {application.description}
+              </p>
+            </ScrollArea>
           </div>
         )}
+
+        <div className="mt-4">
+          <label className="font-mono text-[11px] uppercase text-slate-400">Work mode</label>
+          <Select
+            value={application.workMode || null}
+            onValueChange={(v) => void onUpdate({ workMode: v as Application['workMode'] })}
+          >
+            <SelectTrigger className="mt-1 h-auto w-44 py-1.5">
+              <SelectValue placeholder="Not set" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="onsite">On site</SelectItem>
+              <SelectItem value="hybrid">Hybrid</SelectItem>
+              <SelectItem value="remote">Remote</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
         <div className="mt-4">
           <label className="font-mono text-[11px] uppercase text-slate-400">Contact</label>

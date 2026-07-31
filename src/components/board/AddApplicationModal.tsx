@@ -92,8 +92,6 @@ export function AddApplicationModal({ onClose, onAdd }: Props) {
       <form onSubmit={submit} className="space-y-3">
         <DialogTitle className="font-display text-lg font-bold">Add application</DialogTitle>
 
-        <input required placeholder="Company" value={form.company} onChange={set('company')} className={inputCls} />
-
         <div>
           <div className="flex gap-2">
             <input
@@ -116,6 +114,7 @@ export function AddApplicationModal({ onClose, onAdd }: Props) {
           {importError && <p className="mt-1 text-xs text-red-500">{importError}</p>}
         </div>
 
+        <input required placeholder="Company" value={form.company} onChange={set('company')} className={inputCls} />
         <input required placeholder="Job title" value={form.jobTitle} onChange={set('jobTitle')} className={inputCls} />
         <div className="flex gap-2">
           <input placeholder="Location (optional)" value={form.location} onChange={set('location')} className={inputCls} />
