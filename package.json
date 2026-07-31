@@ -5,6 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:emu": "VITE_USE_EMULATORS=true vite",
+    "dev:debug": "VITE_FIRESTORE_DEBUG=true vite",
+    "emulators": "npm --prefix functions run build && firebase emulators:start --import=.emulator-data --export-on-exit=.emulator-data",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview"
