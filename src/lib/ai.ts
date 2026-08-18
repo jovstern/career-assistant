@@ -53,3 +53,23 @@ export async function analyzeSkillGap(applicationId: string): Promise<void> {
   )
   await fn({ applicationId })
 }
+
+export async function analyzeRejection(
+  applicationId: string
+): Promise<{ summary: string; itemCount: number }> {
+  const fn = httpsCallable<{ applicationId: string }, { summary: string; itemCount: number }>(
+    fns,
+    'analyzeRejection'
+  )
+  const res = await fn({ applicationId })
+  return res.data
+}
+
+export async function adviseGrowthItem(itemId: string): Promise<{ suggestedActions: string[] }> {
+  const fn = httpsCallable<{ itemId: string }, { suggestedActions: string[] }>(
+    fns,
+    'adviseGrowthItem'
+  )
+  const res = await fn({ itemId })
+  return res.data
+}

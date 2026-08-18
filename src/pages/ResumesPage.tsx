@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import { collection, onSnapshot, orderBy, query } from 'firebase/firestore'
 import { Download, FileText, MoreVertical, Sparkles, Trash2 } from 'lucide-react'
@@ -17,6 +17,8 @@ import { useAuth } from '../stores/useAuth'
 import { useApplications } from '../stores/useApplications'
 import { useProfile } from '../stores/useProfile'
 import { Button } from '@/components/ui/button'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { toastError, toastSuccess } from '@/lib/toast'
 import {
   Select,
   SelectContent,
@@ -28,7 +30,6 @@ import type { Resume } from '../types'
 
 export function ResumesPage() {
   const user = useAuth((s) => s.user)
-  const navigate = useNavigate()
   const { applications, subscribe: subscribeApps } = useApplications()
   const { profile, loaded: profileLoaded, load: loadProfile } = useProfile()
   const [resumes, setResumes] = useState<Resume[]>([])
@@ -37,6 +38,7 @@ export function ResumesPage() {
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState('')
   const [pdfResume, setPdfResume] = useState<Resume | null>(null)
+  const [confirmResume, setConfirmResume] = useState<Resume | null>(null)
   const pdfRef = useRef<HTMLElement>(null)
 
   // Render the chosen resume into a hidden article, then capture it as a PDF.
@@ -57,12 +59,6 @@ export function ResumesPage() {
     }, 60)
     return () => clearTimeout(timer)
   }, [pdfResume])
-
-  const removeResume = async (resumeId: string) => {
-    if (!user) return
-    if (!window.confirm('Delete this resume? This cannot be undone.')) return
-    await deleteResume(user.uid, resumeId)
-  }
 
   useEffect(() => {
     if (!user) return
@@ -95,7 +91,7 @@ export function ResumesPage() {
     setError('')
     try {
       const resumeId = await generateResume(selectedAppId)
-      navigate(`/resume/${resumeId}`)
+      window.open(`/resume/${resumeId}`, '_blank', 'noopener,noreferrer')
     } catch (err) {
       setError((err instanceof Error ? err.message : 'Generation failed').replace(/^Firebase: /, ''))
     } finally {
@@ -113,9 +109,29 @@ export function ResumesPage() {
 
       {!hasBaseResume && profileLoaded && (
         <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-          No base resume yet — <Link to="/profile" className="font-medium underline">upload yours in Profile</Link>{' '}
+          No base resume yet — <Link to="/profile#resume" className="font-medium underline">upload yours in Profile</Link>{' '}
           for much better results. Until then, resumes are built from your profile details only.
         </div>
+      )}
+
+      {profileLoaded && (
+        <Link
+          to="/profile#resume"
+          className="mt-4 flex items-center justify-between rounded-lg border border-slate-200 bg-white p-3 transition-shadow hover:shadow-md"
+        >
+          <div className="flex items-center gap-3">
+            <FileText size={16} className="shrink-0 text-cobalt" />
+            <div>
+              <p className="text-sm font-medium">Your resume</p>
+              <p className="font-mono text-[11px] text-slate-400">
+                {hasBaseResume
+                  ? `${profile.baseResume!.length.toLocaleString()} characters`
+                  : 'Not added yet'}
+              </p>
+            </div>
+          </div>
+          <span className="text-xs text-cobalt hover:underline">Edit →</span>
+        </Link>
       )}
 
       <div className="mt-6 rounded-xl border border-slate-200 bg-white p-4">
@@ -161,7 +177,12 @@ export function ResumesPage() {
               key={r.id}
               className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white p-3 transition-shadow hover:shadow-md"
             >
-              <Link to={`/resume/${r.id}`} className="flex min-w-0 flex-1 items-center gap-3">
+              <Link
+                to={`/resume/${r.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex min-w-0 flex-1 items-center gap-3"
+              >
                 <FileText size={16} className="shrink-0 text-cobalt" />
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium">
@@ -194,7 +215,7 @@ export function ResumesPage() {
                     {pdfResume?.id === r.id ? 'Preparing…' : 'Download PDF'}
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onClick={() => void removeResume(r.id)}
+                    onClick={() => setConfirmResume(r)}
                     className="text-red-500 data-highlighted:bg-red-50 data-highlighted:text-red-600"
                   >
                     <Trash2 size={14} />
@@ -215,6 +236,25 @@ export function ResumesPage() {
           </article>
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmResume !== null}
+        onOpenChange={(open) => !open && setConfirmResume(null)}
+        title="Delete this resume?"
+        description={
+          confirmResume ? `${confirmResume.jobTitle} · ${confirmResume.company} will be permanently deleted.` : undefined
+        }
+        onConfirm={async () => {
+          if (!user || !confirmResume) return
+          try {
+            await deleteResume(user.uid, confirmResume.id)
+            toastSuccess('Resume deleted')
+          } catch (err) {
+            toastError(err instanceof Error ? err.message : 'Failed to delete resume')
+            throw err
+          }
+        }}
+      />
     </div>
   )
 }

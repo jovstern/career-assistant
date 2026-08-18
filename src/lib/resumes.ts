@@ -18,3 +18,12 @@ export async function deleteResume(uid: string, resumeId: string): Promise<void>
   await Promise.all(refs.docs.map((d) => updateDoc(d.ref, { resumeId: deleteField() })))
   await deleteDoc(doc(db, 'users', uid, 'resumes', resumeId))
 }
+
+/** Persist a manual edit to a resume's markdown content. */
+export async function updateResumeMarkdown(
+  uid: string,
+  resumeId: string,
+  markdown: string
+): Promise<void> {
+  await updateDoc(doc(db, 'users', uid, 'resumes', resumeId), { markdown })
+}

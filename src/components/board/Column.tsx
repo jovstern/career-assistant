@@ -13,7 +13,7 @@ export function Column({ stage, applications, onCardClick }: Props) {
   const { setNodeRef, isOver } = useDroppable({ id: stage })
 
   return (
-    <div className="flex flex-col">
+    <div className="flex min-w-[260px] flex-1 flex-col">
       <div className="mb-2 flex items-baseline justify-between px-1">
         <span className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-slate-500">
           <span

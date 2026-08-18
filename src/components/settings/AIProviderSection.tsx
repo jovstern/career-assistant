@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { ShieldCheck } from 'lucide-react'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { useAuth } from '@/stores/useAuth'
 import { useAIProvider, DEFAULT_MODELS } from '@/stores/useAIProvider'
 import type { AIProvider } from '@/stores/useAIProvider'
@@ -14,8 +15,6 @@ const PROVIDERS: { id: AIProvider; name: string; keyHint: string; keyUrl: string
 ]
 
 const labelCls = 'font-mono text-[11px] uppercase text-slate-400'
-const inputCls =
-  'w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:border-cobalt focus:outline-none'
 
 const emptyPerProvider: Record<AIProvider, string> = { claude: '', gemini: '', openai: '' }
 
@@ -135,14 +134,14 @@ export function AIProviderSection() {
 
         <div>
           <label className={labelCls}>{providerInfo.name} API key</label>
-          <input
+          <Input
             type="password"
             value={apiKeyInput}
             placeholder={
               hasSavedKey ? '••••••••••••  key saved' : providerInfo.keyHint
             }
             onChange={(e) => setKeys((k) => ({ ...k, [provider]: e.target.value }))}
-            className={inputCls}
+            className="bg-white"
             autoComplete="off"
           />
           <p className="mt-1.5 flex items-start gap-1.5 text-xs text-slate-500">
@@ -163,11 +162,11 @@ export function AIProviderSection() {
 
         <div>
           <label className={labelCls}>Model (optional)</label>
-          <input
+          <Input
             value={modelInput}
             placeholder={`default: ${DEFAULT_MODELS[provider]}`}
             onChange={(e) => setModels((m) => ({ ...m, [provider]: e.target.value }))}
-            className={inputCls}
+            className="bg-white"
           />
         </div>
 

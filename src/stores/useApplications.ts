@@ -30,6 +30,7 @@ interface ApplicationsState {
         | 'contactEmail'
         | 'contactPhone'
         | 'workMode'
+        | 'rejection'
       >
     >
   ) => Promise<void>

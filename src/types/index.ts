@@ -1,9 +1,9 @@
-export const STAGES = ['saved', 'applied', 'interviewing', 'offer', 'rejected'] as const
+export const STAGES = ['applied', 'phoneScreen', 'interviewing', 'offer', 'rejected'] as const
 export type Stage = (typeof STAGES)[number]
 
 export const STAGE_LABELS: Record<Stage, string> = {
-  saved: 'Saved',
   applied: 'Applied',
+  phoneScreen: 'Phone Screen',
   interviewing: 'Interviewing',
   offer: 'Offer',
   rejected: 'Rejected',
@@ -43,6 +43,10 @@ export interface InterviewStep {
   done: boolean
 }
 
+export interface RejectionInfo {
+  reasonText: string
+}
+
 export interface Application {
   id: string
   company: string
@@ -59,6 +63,22 @@ export interface Application {
   resumeId?: string
   skillGap?: SkillGap
   interviewSteps?: InterviewStep[]
+  rejection?: RejectionInfo
+  createdAt: number
+  updatedAt: number
+}
+
+/** A single entry in the user's unified growth list — weaknesses to work on,
+ * whether typed in directly or found by AI analyzing a rejection. */
+export interface GrowthItem {
+  id: string
+  title: string
+  notes?: string
+  priority: 'high' | 'medium' | 'low'
+  suggestedActions?: string[]
+  source: 'manual' | 'ai'
+  relatedApplicationIds: string[]
+  done: boolean
   createdAt: number
   updatedAt: number
 }

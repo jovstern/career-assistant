@@ -1,14 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
-import { ArrowLeft, Sparkles, Trash2 } from 'lucide-react'
+import { ArrowLeft, Pencil, Sparkles, Trash2 } from 'lucide-react'
 import { doc, getDoc } from 'firebase/firestore'
 import { Button } from '@/components/ui/button'
 import { db } from '../lib/firebase'
 import { refineResume } from '../lib/ai'
-import { deleteResume } from '../lib/resumes'
+import { deleteResume, updateResumeMarkdown } from '../lib/resumes'
 import { downloadElementAsPdf } from '../lib/downloadPdf'
 import { useAuth } from '../stores/useAuth'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { ResumeEditor } from '@/components/resume/ResumeEditor'
+import { toastError, toastSuccess } from '@/lib/toast'
 import type { Resume } from '../types'
 
 export function ResumePage() {
@@ -23,6 +26,10 @@ export function ResumePage() {
   const [refining, setRefining] = useState(false)
   const [editError, setEditError] = useState('')
   const [deleting, setDeleting] = useState(false)
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
+  const [manualEditing, setManualEditing] = useState(false)
+  const [draft, setDraft] = useState('')
+  const [savingDraft, setSavingDraft] = useState(false)
   const articleRef = useRef<HTMLElement>(null)
 
   useEffect(() => {
@@ -70,16 +77,40 @@ export function ResumePage() {
     }
   }
 
+  const startManualEdit = () => {
+    setDraft(resume.markdown)
+    setEditing(false)
+    setManualEditing(true)
+  }
+
+  const saveDraft = async () => {
+    if (!user) return
+    setSavingDraft(true)
+    try {
+      await updateResumeMarkdown(user.uid, resume.id, draft)
+      setResume({ ...resume, markdown: draft })
+      setManualEditing(false)
+      toastSuccess('Resume updated')
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : 'Failed to save changes')
+    } finally {
+      setSavingDraft(false)
+    }
+  }
+
   const removeResume = async () => {
     if (!user) return
-    if (!window.confirm('Delete this resume? This cannot be undone.')) return
     setDeleting(true)
     try {
       await deleteResume(user.uid, resume.id)
+      toastSuccess('Resume deleted')
       navigate('/resumes')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Delete failed')
+      const message = err instanceof Error ? err.message : 'Delete failed'
+      setError(message)
+      toastError(message)
       setDeleting(false)
+      throw err
     }
   }
 
@@ -105,7 +136,11 @@ export function ResumePage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setEditing((e) => !e)}
+            onClick={() => {
+              setManualEditing(false)
+              setEditing((e) => !e)
+            }}
+            disabled={manualEditing}
             className="border-cobalt text-xs text-cobalt hover:bg-cobalt-soft hover:text-cobalt"
           >
             <Sparkles size={13} />
@@ -114,7 +149,24 @@ export function ResumePage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => navigator.clipboard.writeText(resume.markdown)}
+            onClick={startManualEdit}
+            disabled={manualEditing}
+            className="text-xs"
+          >
+            <Pencil size={13} />
+            Edit manually
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={async () => {
+              try {
+                await navigator.clipboard.writeText(resume.markdown)
+                toastSuccess('Markdown copied to clipboard')
+              } catch {
+                toastError('Could not copy to clipboard')
+              }
+            }}
             className="text-xs"
           >
             Copy markdown
@@ -125,7 +177,7 @@ export function ResumePage() {
           <Button
             variant="ghost"
             size="icon-sm"
-            onClick={removeResume}
+            onClick={() => setConfirmDeleteOpen(true)}
             disabled={deleting}
             title="Delete resume"
             className="text-slate-400 hover:bg-red-50 hover:text-red-500"
@@ -165,14 +217,42 @@ export function ResumePage() {
         </div>
       )}
 
-      <article
-        ref={articleRef}
-        className={`prose-resume mt-6 rounded-xl border border-slate-200 bg-white p-10 shadow-sm transition-opacity print:mt-0 print:border-0 print:p-0 print:shadow-none ${
-          refining ? 'opacity-50' : ''
-        }`}
-      >
-        <ReactMarkdown>{resume.markdown}</ReactMarkdown>
-      </article>
+      {manualEditing ? (
+        <div className="mt-6 print:hidden">
+          <ResumeEditor value={draft} onChange={setDraft} rows={20} />
+          <div className="mt-3 flex gap-2">
+            <Button size="sm" onClick={saveDraft} disabled={savingDraft || !draft.trim()} className="text-xs">
+              {savingDraft ? 'Saving…' : 'Save changes'}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setManualEditing(false)}
+              disabled={savingDraft}
+              className="text-xs text-slate-500"
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <article
+          ref={articleRef}
+          className={`prose-resume mt-6 rounded-xl border border-slate-200 bg-white p-10 shadow-sm transition-opacity print:mt-0 print:border-0 print:p-0 print:shadow-none ${
+            refining ? 'opacity-50' : ''
+          }`}
+        >
+          <ReactMarkdown>{resume.markdown}</ReactMarkdown>
+        </article>
+      )}
+
+      <ConfirmDialog
+        open={confirmDeleteOpen}
+        onOpenChange={setConfirmDeleteOpen}
+        title="Delete this resume?"
+        description={`${resume.jobTitle} · ${resume.company} will be permanently deleted.`}
+        onConfirm={removeResume}
+      />
     </div>
   )
 }

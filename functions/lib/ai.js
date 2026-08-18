@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.analyzeSkillGap = exports.refineResume = exports.generateResume = exports.testAIConnection = void 0;
+exports.adviseGrowthItem = exports.analyzeRejection = exports.analyzeSkillGap = exports.refineResume = exports.generateResume = exports.testAIConnection = void 0;
 const https_1 = require("firebase-functions/v2/https");
 const logger = __importStar(require("firebase-functions/logger"));
 const firestore_1 = require("firebase-admin/firestore");
@@ -184,5 +184,89 @@ exports.analyzeSkillGap = (0, https_1.onCall)(async (request) => {
     });
     logger.info(`analyzeSkillGap uid=${uid} provider=${settings.provider} app=${applicationId} items=${gap.items.length}`);
     return { summary: gap.summary, itemCount: gap.items.length };
+});
+exports.analyzeRejection = (0, https_1.onCall)(async (request) => {
+    const uid = request.auth?.uid;
+    if (!uid)
+        throw new https_1.HttpsError('unauthenticated', 'Sign in required');
+    const applicationId = request.data?.applicationId;
+    if (!applicationId)
+        throw new https_1.HttpsError('invalid-argument', 'applicationId is required');
+    const { profile, application, settings } = await loadContext(uid, applicationId);
+    if (application.stage !== 'rejected') {
+        throw new https_1.HttpsError('failed-precondition', 'Mark this application as rejected first');
+    }
+    const reasonText = typeof application.rejection?.reasonText === 'string'
+        ? application.rejection.reasonText.trim()
+        : '';
+    const text = await (0, providers_1.callAI)(settings, {
+        maxTokens: 4096,
+        system: 'You help a job seeker understand why they were rejected and what to work on. ' +
+            (reasonText
+                ? 'The candidate has told you what they know about the reason — treat it as ground truth and expand on it into concrete, actionable weaknesses. '
+                : 'The candidate does not know why they were rejected — infer the most likely reasons from the gap between their profile and the target job, and hedge appropriately since this is inference, not fact. ') +
+            'Keep the list focused: 2-6 items, most important first. Each item should be something the candidate can actually work on. ' +
+            'Respond with ONLY valid JSON, no prose and no code fences, matching exactly: ' +
+            '{"summary": "<two-sentence assessment>", "items": [{"title": "<short weakness, e.g. \'System design depth\'>", "priority": "high|medium|low", "suggestedActions": ["<one or two concrete next steps>"]}]}',
+        user: `Candidate title/seniority: ${profile.title} (${profile.seniority})\nCandidate skills: ${JSON.stringify(profile.skills ?? [])}\n\n` +
+            `Job:\nTitle: ${application.jobTitle}\nCompany: ${application.company}\nDescription: ${application.description || '(none provided)'}\n\n` +
+            `What the candidate knows about the rejection: ${reasonText || '(nothing — infer from the job/profile gap)'}`,
+    });
+    const result = (0, providers_1.parseJson)(text);
+    const now = Date.now();
+    const growthCol = db().collection('users').doc(uid).collection('growthItems');
+    const batch = db().batch();
+    for (const item of result.items) {
+        const ref = growthCol.doc();
+        batch.set(ref, {
+            title: item.title,
+            priority: item.priority,
+            suggestedActions: item.suggestedActions ?? [],
+            source: 'ai',
+            relatedApplicationIds: [applicationId],
+            done: false,
+            createdAt: now,
+            updatedAt: now,
+        });
+    }
+    await batch.commit();
+    logger.info(`analyzeRejection uid=${uid} provider=${settings.provider} app=${applicationId} items=${result.items.length}`);
+    return { summary: result.summary, itemCount: result.items.length };
+});
+exports.adviseGrowthItem = (0, https_1.onCall)(async (request) => {
+    const uid = request.auth?.uid;
+    if (!uid)
+        throw new https_1.HttpsError('unauthenticated', 'Sign in required');
+    const itemId = request.data?.itemId;
+    if (!itemId)
+        throw new https_1.HttpsError('invalid-argument', 'itemId is required');
+    const [profileSnap, itemSnap, settings] = await Promise.all([
+        db().collection('users').doc(uid).get(),
+        db().collection('users').doc(uid).collection('growthItems').doc(itemId).get(),
+        (0, providers_1.loadAISettings)(uid),
+    ]);
+    const profile = profileSnap.data();
+    const item = itemSnap.data();
+    if (!profile)
+        throw new https_1.HttpsError('failed-precondition', 'Fill in your profile first');
+    if (!item)
+        throw new https_1.HttpsError('not-found', 'Growth item not found');
+    if (!settings) {
+        throw new https_1.HttpsError('failed-precondition', 'Choose an AI provider and add your API key in Settings');
+    }
+    const text = await (0, providers_1.callAI)(settings, {
+        maxTokens: 2048,
+        system: 'You give a job seeker concrete, specific advice on a single growth area they are actively working on. ' +
+            'If they already wrote their own notes, build on those directly — reference what they said, don\'t repeat generic advice they already know. ' +
+            'Keep it practical and specific to their seniority. ' +
+            'Respond with ONLY valid JSON, no prose and no code fences, matching exactly: ' +
+            '{"suggestedActions": ["<one specific, actionable step>", "..."]}, with 2-4 items.',
+        user: `Candidate title/seniority: ${profile.title} (${profile.seniority})\n\n` +
+            `Growth area: ${item.title}\nTheir own notes: ${item.notes || '(nothing written yet)'}`,
+    });
+    const result = (0, providers_1.parseJson)(text);
+    await itemSnap.ref.update({ suggestedActions: result.suggestedActions, updatedAt: Date.now() });
+    logger.info(`adviseGrowthItem uid=${uid} provider=${settings.provider} item=${itemId}`);
+    return { suggestedActions: result.suggestedActions };
 });
 //# sourceMappingURL=ai.js.map

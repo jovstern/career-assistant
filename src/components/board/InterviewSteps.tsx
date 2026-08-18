@@ -3,7 +3,9 @@ import { Plus, X } from 'lucide-react'
 import type { InterviewStep } from '../../types'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Input } from '@/components/ui/input'
 import { Progress } from '@/components/ui/progress'
+import { cn } from '@/lib/utils'
 
 const SUGGESTIONS = ['Phone screen', 'Take-home assignment', 'Technical interview', 'On-site', 'HR / offer talk']
 
@@ -46,6 +48,9 @@ export function InterviewSteps({ steps, onChange }: Props) {
   }
 
   const done = local.filter((s) => s.done).length
+  const suggestions = SUGGESTIONS.filter(
+    (s) => !local.some((step) => step.label.toLowerCase() === s.toLowerCase())
+  )
 
   return (
     <div className="mt-1 rounded-lg border border-slate-200 p-3">
@@ -66,16 +71,17 @@ export function InterviewSteps({ steps, onChange }: Props) {
         {local.map((step) => (
           <li key={step.id} className="group flex items-center gap-2">
             <Checkbox checked={step.done} onCheckedChange={() => toggle(step.id)} />
-            <input
+            <Input
               value={step.label}
               onChange={(e) => patchLabel(step.id, e.target.value)}
               onBlur={commitLabels}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
               }}
-              className={`w-full rounded border border-transparent bg-transparent px-1 py-0.5 text-sm focus:border-cobalt focus:bg-white focus:outline-none ${
-                step.done ? 'text-slate-400 line-through' : ''
-              }`}
+              className={cn(
+                'h-auto border-transparent bg-transparent px-1 py-0.5 text-sm focus-visible:bg-white',
+                step.done && 'text-slate-400 line-through'
+              )}
             />
             <Button
               type="button"
@@ -92,7 +98,7 @@ export function InterviewSteps({ steps, onChange }: Props) {
       </ul>
 
       <div className="mt-2 flex items-center gap-2">
-        <input
+        <Input
           value={newLabel}
           onChange={(e) => setNewLabel(e.target.value)}
           onKeyDown={(e) => {
@@ -102,7 +108,6 @@ export function InterviewSteps({ steps, onChange }: Props) {
             }
           }}
           placeholder="Add a step… e.g. Phone screen"
-          className="w-full rounded-md border border-slate-200 px-2 py-1.5 text-sm focus:border-cobalt focus:outline-none"
         />
         <Button
           type="button"
@@ -116,9 +121,9 @@ export function InterviewSteps({ steps, onChange }: Props) {
         </Button>
       </div>
 
-      {local.length === 0 && (
+      {suggestions.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1.5">
-          {SUGGESTIONS.map((s) => (
+          {suggestions.map((s) => (
             <Button
               key={s}
               type="button"

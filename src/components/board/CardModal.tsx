@@ -1,14 +1,21 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Trash2 } from 'lucide-react'
 import type { Application, Stage } from '../../types'
 import { STAGES, STAGE_LABELS } from '../../types'
-import { analyzeSkillGap, generateResume } from '../../lib/ai'
+import { analyzeRejection, analyzeSkillGap, generateResume } from '../../lib/ai'
+import { useAuth } from '../../stores/useAuth'
+import { useGrowthItems } from '../../stores/useGrowthItems'
 import { SkillGapPanel } from './SkillGapPanel'
 import { InterviewSteps } from './InterviewSteps'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { toastError, toastSuccess } from '@/lib/toast'
 import {
   Select,
   SelectContent,
@@ -31,6 +38,7 @@ interface Props {
         | 'contactEmail'
         | 'contactPhone'
         | 'workMode'
+        | 'rejection'
       >
     >
   ) => Promise<void>
@@ -39,18 +47,33 @@ interface Props {
 
 export function CardModal({ application, onClose, onUpdate, onDelete }: Props) {
   const navigate = useNavigate()
+  const user = useAuth((s) => s.user)
+  const addGrowthItem = useGrowthItems((s) => s.add)
   const [notes, setNotes] = useState(application.notes)
   const [contactEmail, setContactEmail] = useState(application.contactEmail ?? '')
   const [contactPhone, setContactPhone] = useState(application.contactPhone ?? '')
+  const [rejectionReason, setRejectionReason] = useState(application.rejection?.reasonText ?? '')
   const [aiBusy, setAiBusy] = useState<'resume' | 'gap' | null>(null)
   const [aiError, setAiError] = useState('')
+  const [rejectionBusy, setRejectionBusy] = useState<'analyze' | 'add' | null>(null)
+  const [rejectionError, setRejectionError] = useState('')
+  const [rejectionResult, setRejectionResult] = useState('')
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
+
+  const safeUpdate = async (data: Parameters<typeof onUpdate>[0]) => {
+    try {
+      await onUpdate(data)
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : 'Failed to save change')
+    }
+  }
 
   const saveContacts = async () => {
     if (
       contactEmail !== (application.contactEmail ?? '') ||
       contactPhone !== (application.contactPhone ?? '')
     ) {
-      await onUpdate({ contactEmail, contactPhone })
+      await safeUpdate({ contactEmail, contactPhone })
     }
   }
 
@@ -59,7 +82,7 @@ export function CardModal({ application, onClose, onUpdate, onDelete }: Props) {
     setAiError('')
     try {
       const resumeId = await generateResume(application.id)
-      navigate(`/resume/${resumeId}`)
+      window.open(`/resume/${resumeId}`, '_blank', 'noopener,noreferrer')
     } catch (err) {
       setAiError(err instanceof Error ? err.message : 'Resume generation failed')
     } finally {
@@ -79,16 +102,60 @@ export function CardModal({ application, onClose, onUpdate, onDelete }: Props) {
     }
   }
 
+  const runRejectionAnalysis = async () => {
+    setRejectionBusy('analyze')
+    setRejectionError('')
+    setRejectionResult('')
+    try {
+      const { itemCount } = await analyzeRejection(application.id)
+      setRejectionResult(
+        itemCount > 0
+          ? `AI added ${itemCount} item${itemCount === 1 ? '' : 's'} to your growth list.`
+          : 'No new weaknesses found.'
+      )
+    } catch (err) {
+      setRejectionError(err instanceof Error ? err.message : 'Rejection analysis failed')
+    } finally {
+      setRejectionBusy(null)
+    }
+  }
+
+  const addReasonToGrowth = async () => {
+    if (!user || !rejectionReason.trim()) return
+    setRejectionBusy('add')
+    setRejectionError('')
+    setRejectionResult('')
+    try {
+      await addGrowthItem(user.uid, {
+        title: `Why I was rejected — ${application.company}`,
+        notes: rejectionReason.trim(),
+        priority: 'medium',
+        relatedApplicationIds: [application.id],
+      })
+      setRejectionResult('Added to your growth list.')
+    } catch (err) {
+      setRejectionError(err instanceof Error ? err.message : 'Failed to add to growth list')
+    } finally {
+      setRejectionBusy(null)
+    }
+  }
+
+  const saveRejectionReason = async () => {
+    if (rejectionReason !== (application.rejection?.reasonText ?? '')) {
+      await safeUpdate({ rejection: { reasonText: rejectionReason } })
+    }
+  }
+
   const toggleGapItem = (index: number) => {
     if (!application.skillGap) return
     const items = application.skillGap.items.map((item, i) =>
       i === index ? { ...item, done: !item.done } : item
     )
-    void onUpdate({ skillGap: { ...application.skillGap, items } })
+    void safeUpdate({ skillGap: { ...application.skillGap, items } })
   }
 
   const saveNotes = async () => {
-    if (notes !== application.notes) await onUpdate({ notes })
+    if (notes !== application.notes) await safeUpdate({ notes })
   }
 
   return (
@@ -113,7 +180,7 @@ export function CardModal({ application, onClose, onUpdate, onDelete }: Props) {
           value={[application.stage]}
           onValueChange={(values) => {
             const stage = values[0] as Stage | undefined
-            if (stage) void onUpdate({ stage })
+            if (stage) void safeUpdate({ stage })
           }}
           className="mt-1 flex w-full flex-wrap gap-1.5"
         >
@@ -141,8 +208,55 @@ export function CardModal({ application, onClose, onUpdate, onDelete }: Props) {
             </label>
             <InterviewSteps
               steps={application.interviewSteps ?? []}
-              onChange={(interviewSteps) => void onUpdate({ interviewSteps })}
+              onChange={(interviewSteps) => void safeUpdate({ interviewSteps })}
             />
+          </div>
+        )}
+
+        {application.stage === 'rejected' && (
+          <div className="mt-4">
+            <div className="flex items-center justify-between">
+              <label className="font-mono text-[11px] uppercase text-slate-400">
+                What do you know about why?
+              </label>
+              <button
+                type="button"
+                onClick={() => navigate('/growth')}
+                className="font-mono text-[11px] text-cobalt hover:underline"
+              >
+                View growth list →
+              </button>
+            </div>
+            <Textarea
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              onBlur={saveRejectionReason}
+              rows={3}
+              placeholder="Optional — anything you were told, or your own read on it…"
+              className="mt-1"
+            />
+            <div className="mt-2 flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={addReasonToGrowth}
+                disabled={!rejectionReason.trim() || rejectionBusy !== null}
+                className="h-auto rounded-full bg-slate-100 px-2.5 py-1 text-xs font-normal text-slate-500 hover:bg-cobalt-soft hover:text-cobalt"
+              >
+                {rejectionBusy === 'add' ? 'Adding…' : 'Add my answer to growth list'}
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={runRejectionAnalysis}
+                disabled={rejectionBusy !== null}
+                className="h-auto rounded-full bg-slate-100 px-2.5 py-1 text-xs font-normal text-slate-500 hover:bg-cobalt-soft hover:text-cobalt"
+              >
+                {rejectionBusy === 'analyze' ? 'Asking AI…' : 'Ask AI for weaknesses'}
+              </Button>
+            </div>
+            {rejectionError && <p className="mt-2 text-xs text-red-500">{rejectionError}</p>}
+            {rejectionResult && <p className="mt-2 text-xs text-slate-500">{rejectionResult}</p>}
           </div>
         )}
 
@@ -175,7 +289,7 @@ export function CardModal({ application, onClose, onUpdate, onDelete }: Props) {
           <label className="font-mono text-[11px] uppercase text-slate-400">Work mode</label>
           <Select
             value={application.workMode || null}
-            onValueChange={(v) => void onUpdate({ workMode: v as Application['workMode'] })}
+            onValueChange={(v) => void safeUpdate({ workMode: v as Application['workMode'] })}
           >
             <SelectTrigger className="mt-1 h-auto w-44 py-1.5">
               <SelectValue placeholder="Not set" />
@@ -191,59 +305,65 @@ export function CardModal({ application, onClose, onUpdate, onDelete }: Props) {
         <div className="mt-4">
           <label className="font-mono text-[11px] uppercase text-slate-400">Contact</label>
           <div className="mt-1 flex gap-2">
-            <input
+            <Input
               type="email"
               value={contactEmail}
               onChange={(e) => setContactEmail(e.target.value)}
               onBlur={saveContacts}
               placeholder="Email"
-              className="w-full rounded-md border border-slate-200 px-2 py-1.5 text-sm focus:border-cobalt focus:outline-none"
             />
-            <input
+            <Input
               type="tel"
               value={contactPhone}
               onChange={(e) => setContactPhone(e.target.value)}
               onBlur={saveContacts}
               placeholder="Phone"
-              className="w-full rounded-md border border-slate-200 px-2 py-1.5 text-sm focus:border-cobalt focus:outline-none"
             />
           </div>
         </div>
 
         <div className="mt-4">
           <label className="font-mono text-[11px] uppercase text-slate-400">Notes</label>
-          <textarea
+          <Textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             onBlur={saveNotes}
             rows={4}
             placeholder="Recruiter contacts, interview dates, impressions…"
-            className="mt-1 w-full rounded-md border border-slate-200 p-2 text-sm focus:border-cobalt focus:outline-none"
+            className="mt-1"
           />
         </div>
 
         <div className="mt-4">
           <label className="font-mono text-[11px] uppercase text-slate-400">AI tools</label>
           <div className="mt-1 flex flex-wrap gap-2">
-            <Button size="sm" onClick={runResume} disabled={aiBusy !== null} className="text-xs">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={runResume}
+              disabled={aiBusy !== null}
+              className="h-auto rounded-full bg-slate-100 px-2.5 py-1 text-xs font-normal text-slate-500 hover:bg-cobalt-soft hover:text-cobalt"
+            >
               {aiBusy === 'resume' ? 'Generating…' : application.resumeId ? 'Regenerate resume' : 'Generate resume'}
             </Button>
             {application.resumeId && (
               <Button
                 size="sm"
-                variant="outline"
-                onClick={() => navigate(`/resume/${application.resumeId}`)}
-                className="border-cobalt text-xs text-cobalt hover:bg-cobalt-soft hover:text-cobalt"
+                variant="ghost"
+                onClick={() =>
+                  window.open(`/resume/${application.resumeId}`, '_blank', 'noopener,noreferrer')
+                }
+                className="h-auto rounded-full bg-slate-100 px-2.5 py-1 text-xs font-normal text-slate-500 hover:bg-cobalt-soft hover:text-cobalt"
               >
                 View resume
               </Button>
             )}
             <Button
               size="sm"
-              variant="outline"
+              variant="ghost"
               onClick={runGap}
               disabled={aiBusy !== null}
-              className="border-cobalt text-xs text-cobalt hover:bg-cobalt-soft hover:text-cobalt"
+              className="h-auto rounded-full bg-slate-100 px-2.5 py-1 text-xs font-normal text-slate-500 hover:bg-cobalt-soft hover:text-cobalt"
             >
               {aiBusy === 'gap' ? 'Analyzing…' : application.skillGap ? 'Re-analyze skill gap' : 'Analyze skill gap'}
             </Button>
@@ -256,18 +376,33 @@ export function CardModal({ application, onClose, onUpdate, onDelete }: Props) {
 
         <div className="mt-4 flex justify-end">
           <Button
-            variant="ghost"
+            variant="secondary"
             size="sm"
-            onClick={async () => {
-              await onDelete()
-              onClose()
-            }}
-            className="text-xs text-red-500 hover:bg-red-50 hover:text-red-600"
+            onClick={() => setConfirmDeleteOpen(true)}
+            className="gap-1.5 bg-red-50 text-xs text-red-600 hover:bg-red-100 hover:text-red-700"
           >
+            <Trash2 size={14} />
             Delete application
           </Button>
         </div>
       </DialogContent>
+
+      <ConfirmDialog
+        open={confirmDeleteOpen}
+        onOpenChange={setConfirmDeleteOpen}
+        title="Delete this application?"
+        description={`${application.jobTitle} at ${application.company} will be permanently removed. This can't be undone.`}
+        onConfirm={async () => {
+          try {
+            await onDelete()
+            toastSuccess('Application deleted')
+            onClose()
+          } catch (err) {
+            toastError(err instanceof Error ? err.message : 'Failed to delete application')
+            throw err
+          }
+        }}
+      />
     </Dialog>
   )
 }

@@ -1,8 +1,13 @@
 import { useState } from 'react'
+import { ArrowRight, Sparkles } from 'lucide-react'
 import type { Application } from '../../types'
 import { importJobFromUrl } from '../../lib/ai'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Label } from '@/components/ui/label'
+import { toastError } from '@/lib/toast'
 import {
   Select,
   SelectContent,
@@ -22,9 +27,6 @@ interface Props {
   onAdd: (data: Omit<Application, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>
 }
 
-const inputCls =
-  'w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:border-cobalt focus:outline-none'
-
 export function AddApplicationModal({ onClose, onAdd }: Props) {
   const [form, setForm] = useState({
     company: '',
@@ -39,6 +41,7 @@ export function AddApplicationModal({ onClose, onAdd }: Props) {
   const [busy, setBusy] = useState(false)
   const [importing, setImporting] = useState(false)
   const [importError, setImportError] = useState('')
+  const [showUrlInput, setShowUrlInput] = useState(false)
 
   const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm((f) => ({ ...f, [key]: e.target.value }))
@@ -59,6 +62,7 @@ export function AddApplicationModal({ onClose, onAdd }: Props) {
         location: job.location || f.location,
         description: job.description || f.description,
       }))
+      setShowUrlInput(false)
     } catch (err) {
       setImportError(
         (err instanceof Error ? err.message : 'Import failed').replace(/^Firebase: /, '')
@@ -76,11 +80,18 @@ export function AddApplicationModal({ onClose, onAdd }: Props) {
       await onAdd({
         ...rest,
         workMode: workMode || undefined,
-        stage: 'saved',
+        stage: 'applied',
         notes: '',
         source: 'manual',
       })
       onClose()
+    } catch (err) {
+      toastError(
+        (err instanceof Error ? err.message : 'Failed to add application').replace(
+          /^Firebase: /,
+          ''
+        )
+      )
     } finally {
       setBusy(false)
     }
@@ -92,32 +103,61 @@ export function AddApplicationModal({ onClose, onAdd }: Props) {
       <form onSubmit={submit} className="space-y-3">
         <DialogTitle className="font-display text-lg font-bold">Add application</DialogTitle>
 
-        <div>
-          <div className="flex gap-2">
-            <input
-              type="url"
-              placeholder="Paste a LinkedIn job link to auto-fill…"
-              value={form.url}
-              onChange={set('url')}
-              className={inputCls}
-            />
+        <div className="rounded-lg border border-dashed border-cobalt/30 bg-cobalt-soft/30 p-2.5">
+          {showUrlInput ? (
+            <div className="flex gap-2">
+              <Input
+                autoFocus
+                type="url"
+                placeholder="e.g. https://www.linkedin.com/jobs/view/1234567890"
+                value={form.url}
+                onChange={set('url')}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    autoFill()
+                  }
+                }}
+              />
+              <Button
+                type="button"
+                size="icon"
+                onClick={autoFill}
+                disabled={importing}
+                className="h-auto shrink-0 bg-cobalt text-white hover:bg-cobalt/90"
+                title="Auto-fill"
+              >
+                <ArrowRight size={14} />
+              </Button>
+            </div>
+          ) : (
             <Button
               type="button"
               variant="outline"
-              onClick={autoFill}
-              disabled={importing}
-              className="h-auto shrink-0 border-cobalt text-xs text-cobalt hover:bg-cobalt-soft hover:text-cobalt"
+              onClick={() => setShowUrlInput(true)}
+              className="h-auto border-cobalt text-xs text-cobalt hover:bg-cobalt-soft hover:text-cobalt"
             >
-              {importing ? 'Importing…' : 'Auto-fill'}
+              <Sparkles size={14} />
+              Auto-fill with AI
             </Button>
-          </div>
+          )}
           {importError && <p className="mt-1 text-xs text-red-500">{importError}</p>}
         </div>
 
-        <input required placeholder="Company" value={form.company} onChange={set('company')} className={inputCls} />
-        <input required placeholder="Job title" value={form.jobTitle} onChange={set('jobTitle')} className={inputCls} />
+        <div className="space-y-1">
+          <Label htmlFor="company">
+            Company <span className="text-destructive">*</span>
+          </Label>
+          <Input id="company" required value={form.company} onChange={set('company')} />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor="jobTitle">
+            Job title <span className="text-destructive">*</span>
+          </Label>
+          <Input id="jobTitle" required value={form.jobTitle} onChange={set('jobTitle')} />
+        </div>
         <div className="flex gap-2">
-          <input placeholder="Location (optional)" value={form.location} onChange={set('location')} className={inputCls} />
+          <Input placeholder="Location (optional)" value={form.location} onChange={set('location')} />
           <Select
             value={form.workMode || null}
             onValueChange={(v) => setForm((f) => ({ ...f, workMode: v as typeof f.workMode }))}
@@ -135,27 +175,24 @@ export function AddApplicationModal({ onClose, onAdd }: Props) {
           </Select>
         </div>
         <div className="flex gap-2">
-          <input
+          <Input
             type="email"
             placeholder="Contact email (optional)"
             value={form.contactEmail}
             onChange={set('contactEmail')}
-            className={inputCls}
           />
-          <input
+          <Input
             type="tel"
             placeholder="Contact phone (optional)"
             value={form.contactPhone}
             onChange={set('contactPhone')}
-            className={inputCls}
           />
         </div>
-        <textarea
+        <Textarea
           placeholder="About the job - used later for resume tailoring"
           value={form.description}
           onChange={set('description')}
           rows={4}
-          className={inputCls}
         />
         <div className="flex justify-end gap-2 pt-1">
           <Button type="button" variant="ghost" onClick={onClose} className="text-slate-500">

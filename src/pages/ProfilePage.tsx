@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useAuth } from '../stores/useAuth'
 import { useProfile } from '../stores/useProfile'
 import { parseResumeFile } from '../lib/parseResumeFile'
@@ -11,6 +12,7 @@ import {
 } from '@/components/ui/select'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Button } from '@/components/ui/button'
+import { ResumeEditor } from '@/components/resume/ResumeEditor'
 import type { UserProfile } from '../types'
 
 const inputCls =
@@ -22,6 +24,7 @@ const REMOTE: UserProfile['preferences']['remote'][] = ['any', 'remote', 'hybrid
 
 export function ProfilePage() {
   const user = useAuth((s) => s.user)
+  const location = useLocation()
   const { profile, loaded, load, save } = useProfile()
   const [form, setForm] = useState(profile)
   const [saved, setSaved] = useState(false)
@@ -54,8 +57,15 @@ export function ProfilePage() {
     setForm(profile)
   }, [profile])
 
+  useEffect(() => {
+    if (!loaded || !location.hash) return
+    document.querySelector(location.hash)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [loaded, location.hash])
+
   if (!user) return null
   if (!loaded) return <p className="p-6 font-mono text-sm text-slate-400">loading profile…</p>
+
+  const isDirty = JSON.stringify(form) !== JSON.stringify(profile)
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -199,11 +209,11 @@ export function ProfilePage() {
           </div>
         </fieldset>
 
-        <fieldset className="rounded-lg border border-slate-200 p-4">
+        <fieldset id="resume" className="scroll-mt-6 rounded-lg border border-slate-200 p-4">
           <legend className={`${labelCls} px-1`}>Your resume</legend>
           <p className="text-xs text-slate-500">
-            Upload or paste your current resume. The AI resume builder combines it with jobs from
-            your board to produce tailored versions.
+            Upload, paste, or write your current resume below. The AI resume builder combines it
+            with jobs from your board to produce tailored versions.
           </p>
           <div className="mt-3 flex items-center gap-3">
             <Button
@@ -230,17 +240,19 @@ export function ProfilePage() {
             )}
           </div>
           {uploadError && <p className="mt-2 text-xs text-red-500">{uploadError}</p>}
-          <textarea
+          <ResumeEditor
             value={form.baseResume ?? ''}
-            onChange={(e) => setForm({ ...form, baseResume: e.target.value })}
+            onChange={(value) => setForm({ ...form, baseResume: value })}
             rows={8}
-            placeholder="…or paste your resume text here"
-            className={`${inputCls} mt-3 font-mono text-xs`}
+            placeholder="…or write your resume here"
+            className="mt-3"
           />
         </fieldset>
 
         <div className="flex items-center gap-3">
-          <Button type="submit">Save profile</Button>
+          <Button type="submit" disabled={!isDirty}>
+            Save profile
+          </Button>
           {saved && <span className="font-mono text-xs text-stage-offer">saved ✓</span>}
         </div>
       </form>

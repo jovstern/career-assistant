@@ -82,7 +82,7 @@ export const useMatches = create<MatchesState>((set) => ({
       location: match.location,
       url: match.url,
       description: match.description,
-      stage: 'saved',
+      stage: 'applied',
       notes: '',
       source: 'agent',
     })

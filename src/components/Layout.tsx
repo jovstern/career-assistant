@@ -6,6 +6,7 @@ import {
   Inbox,
   SquareKanban,
   Settings,
+  Target,
   UserRound,
 } from 'lucide-react'
 import { useAuth } from '../stores/useAuth'
@@ -15,6 +16,7 @@ import { Button } from '@/components/ui/button'
 const navItems = [
   { to: '/', label: 'Board', Icon: SquareKanban },
   { to: '/resumes', label: 'Resumes', Icon: FileText },
+  { to: '/growth', label: 'Growth', Icon: Target },
   { to: '/profile', label: 'Profile', Icon: UserRound },
   { to: '/settings', label: 'Settings', Icon: Settings },
 ]
